@@ -5,3 +5,9 @@
 build
 
 gradle
+
+src/main/java/plc/examples
+src/main/java/plc/homework
+
+src/test/java/plc/examples
+src/test/java/plc/homework
