@@ -29,22 +29,14 @@ public final class Lexer {
      */
     public List<Token> lex() {
         List<Token> result = new ArrayList<>();
-        // int count = 0;
         while (chars.has(0)) {
-            // if (count == 2) break;
             if (peek("[ \b\n\r\t]")) {
-                // result = Arrays.asList(
-                //     new Token(Token.Type.IDENTIFIER, "LET", 0),
-                //     new Token(Token.Type.IDENTIFIER, "x", 4),
-                //     new Token(Token.Type.OPERATOR, "=", 6)
-                // );
                 chars.advance();
                 chars.skip();
             }
             else {
                 result.add(lexToken());
             }
-            // count++;
         }
         return result;
     }
@@ -69,7 +61,6 @@ public final class Lexer {
 
     public Token lexIdentifier() {
         String pattern = chars.get(0) == '@' ? "[A-Za-z0-9_-]" : "[A-Za-z0-9_-]|'@'";
-        // String pattern = "[A-Za-z0-9_-]";
         while (match(pattern));
         return chars.emit(Token.Type.IDENTIFIER);
     }
@@ -77,7 +68,9 @@ public final class Lexer {
     public Token lexNumber() {
         boolean decimal = false;
         String pattern = "[0-9]";
-        if (chars.get(0) == '-') chars.advance();
+        if (peek("-", "[^0-9]"))
+            return lexOperator();
+        else match("-");
         if (chars.get(0) == '0') return chars.emit(Token.Type.INTEGER);
         while (chars.has(0) && peek(pattern)) {
             chars.advance();
