@@ -71,7 +71,10 @@ public final class Lexer {
         if (peek("-", "[^0-9]"))
             return lexOperator();
         else match("-");
-        if (chars.get(0) == '0') return chars.emit(Token.Type.INTEGER);
+        if (peek("0", "[^.]")) {
+            chars.advance();
+            return chars.emit(Token.Type.INTEGER);
+        }
         while (chars.has(0) && peek(pattern)) {
             chars.advance();
             if (!chars.has(0)) break;
