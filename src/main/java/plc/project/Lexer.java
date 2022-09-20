@@ -1,6 +1,7 @@
 package plc.project;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * The lexer works through three main functions:
@@ -27,7 +28,25 @@ public final class Lexer {
      * whitespace where appropriate.
      */
     public List<Token> lex() {
-        throw new UnsupportedOperationException(); //TODO
+        List<Token> result = new ArrayList<>();
+        // int count = 0;
+        while (chars.has(0)) {
+            // if (count == 2) break;
+            if (peek("[ \b\n\r\t]")) {
+                // result = Arrays.asList(
+                //     new Token(Token.Type.IDENTIFIER, "LET", 0),
+                //     new Token(Token.Type.IDENTIFIER, "x", 4),
+                //     new Token(Token.Type.OPERATOR, "=", 6)
+                // );
+                chars.advance();
+                chars.skip();
+            }
+            else {
+                result.add(lexToken());
+            }
+            // count++;
+        }
+        return result;
     }
 
     /**
@@ -39,23 +58,49 @@ public final class Lexer {
      * by {@link #lex()}
      */
     public Token lexToken() {
-        throw new UnsupportedOperationException(); //TODO
+        if (peek("('@'|[A-Za-z])")) return lexIdentifier();
+        if (peek("-|[0-9]")) return lexNumber();
+        if (match("'")) return lexCharacter();
+        if (match("\"")) return lexString();
+        if (peek("\\\\")) lexEscape();
+        return lexOperator();
+        // if (peek("[!=&|]")) return lexOperator();
     }
 
     public Token lexIdentifier() {
-        throw new UnsupportedOperationException(); //TODO
+        String pattern = chars.get(0) == '@' ? "[A-Za-z0-9_-]" : "[A-Za-z0-9_-]|'@'";
+        // String pattern = "[A-Za-z0-9_-]";
+        while (match(pattern));
+        return chars.emit(Token.Type.IDENTIFIER);
     }
 
     public Token lexNumber() {
-        throw new UnsupportedOperationException(); //TODO
+        boolean decimal = false;
+        String pattern = "[0-9]";
+        if (chars.get(0) == '-') chars.advance();
+        if (chars.get(0) == '0') return chars.emit(Token.Type.INTEGER);
+        while (chars.has(0) && peek(pattern)) {
+            chars.advance();
+            if (!chars.has(0)) break;
+            if (chars.get(0) == '.' && !decimal) {
+                if (!peek(".", "[0-9]")) break;
+                pattern = "[.0-9]";
+                decimal = true;
+            }
+            else if (chars.get(0) == '.') break;
+        }
+        return chars.emit(decimal ? Token.Type.DECIMAL : Token.Type.INTEGER);
     }
 
     public Token lexCharacter() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("[^'\\n\\r\\\\]", "'")) return chars.emit(Token.Type.CHARACTER);
+        else throw new ParseException("Invalid character!", chars.index);
     }
 
     public Token lexString() {
-        throw new UnsupportedOperationException(); //TODO
+        while (match("[^\"\\n\\r\\\\]"));
+        if (match("\"")) return chars.emit(Token.Type.STRING);
+        else throw new ParseException("Invalid string!", chars.index);
     }
 
     public void lexEscape() {
@@ -63,7 +108,11 @@ public final class Lexer {
     }
 
     public Token lexOperator() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("!", "=") ||
+            match("=", "=") ||
+            match("&", "&")) return chars.emit(Token.Type.OPERATOR);
+        chars.advance();
+        return chars.emit(Token.Type.OPERATOR);
     }
 
     /**
