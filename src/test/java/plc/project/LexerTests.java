@@ -159,6 +159,10 @@ public class LexerTests {
                         new Token(Token.Type.DECIMAL, "-30.53", 0),
                         new Token(Token.Type.OPERATOR, "+", 6),
                         new Token(Token.Type.DECIMAL, "20.19", 7)
+                )),
+                Arguments.of("Example 7", "00.05", Arrays.asList(
+                        new Token(Token.Type.INTEGER, "0", 0),
+                        new Token(Token.Type.DECIMAL, "0.05", 1)
                 ))
         );
     }

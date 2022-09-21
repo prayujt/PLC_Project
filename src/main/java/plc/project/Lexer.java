@@ -75,15 +75,13 @@ public final class Lexer {
             chars.advance();
             return chars.emit(Token.Type.INTEGER);
         }
-        while (chars.has(0) && peek(pattern)) {
-            chars.advance();
+        while (chars.has(0) && match(pattern)) {
             if (!chars.has(0)) break;
-            if (chars.get(0) == '.' && !decimal) {
+            if (peek("[.]") && !decimal) {
                 if (!peek(".", "[0-9]")) break;
-                pattern = "[.0-9]";
+                chars.advance();
                 decimal = true;
             }
-            else if (chars.get(0) == '.') break;
         }
         return chars.emit(decimal ? Token.Type.DECIMAL : Token.Type.INTEGER);
     }
