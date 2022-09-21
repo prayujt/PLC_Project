@@ -133,8 +133,60 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Character", "(", true),
                 Arguments.of("Comparison", "!=", true),
+                Arguments.of("Symbol", "$", true),
+                Arguments.of("Plus Sign", "+", true),
+
                 Arguments.of("Space", " ", false),
                 Arguments.of("Tab", "\t", false)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    void testWhitespace(String test, String input, List<Token> expected) {
+        test(input, expected, true);
+    }
+
+    private static Stream<Arguments> testWhitespace() {
+        return Stream.of(
+                Arguments.of("Multiple Spaces", "one   two", Arrays.asList(
+                        new Token(Token.Type.IDENTIFIER, "one", 0),
+                        new Token(Token.Type.IDENTIFIER, "two", 6)
+                )),
+                Arguments.of("Trailing Newline", "token\n", Arrays.asList(
+                        new Token(Token.Type.IDENTIFIER, "token", 0)
+                )),
+                Arguments.of("Not Whitespace", "one\u000Btwo", Arrays.asList(
+                        new Token(Token.Type.IDENTIFIER, "one", 0),
+                        new Token(Token.Type.OPERATOR, "\u000B", 3),
+                        new Token(Token.Type.IDENTIFIER, "two", 4)
+                ))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    void testMixedTokens(String test, String input, List<Token> expected) {
+        test(input, expected, true);
+    }
+
+    private static Stream<Arguments> testMixedTokens() {
+        return Stream.of(
+                Arguments.of("Multiple Decimals", "1.2.3", Arrays.asList(
+                        new Token(Token.Type.DECIMAL, "1.2", 0),
+                        new Token(Token.Type.OPERATOR, ".", 3),
+                        new Token(Token.Type.INTEGER, "3", 4)
+                )),
+                Arguments.of("Equals Combinations", "!====", Arrays.asList(
+                        new Token(Token.Type.OPERATOR, "!=", 0),
+                        new Token(Token.Type.OPERATOR, "==", 2),
+                        new Token(Token.Type.OPERATOR, "=", 4)
+                )),
+                Arguments.of("Weird Quotes", "\'\"\'string\"\'\"", Arrays.asList(
+                        new Token(Token.Type.CHARACTER, "'\"'", 0),
+                        new Token(Token.Type.IDENTIFIER, "string", 3),
+                        new Token(Token.Type.STRING, "\"'\"", 9)
+                ))
         );
     }
 
@@ -189,8 +241,8 @@ public class LexerTests {
     @Test
     void testException() {
         ParseException exception = Assertions.assertThrows(ParseException.class,
-                () -> new Lexer("\"unterminated").lex());
-        Assertions.assertEquals(13, exception.getIndex());
+                () -> new Lexer("\"invalid\\escape\"").lex());
+        Assertions.assertEquals(9, exception.getIndex());
     }
 
     /**
