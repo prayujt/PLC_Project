@@ -87,14 +87,15 @@ public final class Lexer {
     }
 
     public Token lexCharacter() {
-        if (match("[^'\\n\\r\\\\]", "'")) return chars.emit(Token.Type.CHARACTER);
+        if (match("\\\\", "[bnrt'\"]", "'") || match("[^\'\\n\\r\\\\]", "'")) return chars.emit(Token.Type.CHARACTER);
         else throw new ParseException("Invalid character!", chars.index);
     }
 
     public Token lexString() {
-        while (match("[^\"\\n\\r\\\\]"));
-        if (match("\"")) return chars.emit(Token.Type.STRING);
-        else throw new ParseException("Invalid string!", chars.index);
+        do {
+            if (chars.has(0) && match("\"")) return chars.emit(Token.Type.STRING);
+        } while (chars.has(0) && (match("[^\"\\n\\r\\\\]") || match("\\\\", "[bnrt'\"]")));
+        throw new ParseException("Invalid string!", chars.index);
     }
 
     public void lexEscape() {
