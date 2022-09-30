@@ -50,24 +50,23 @@ public final class Lexer {
      * by {@link #lex()}
      */
     public Token lexToken() {
-        if (peek("('@'|[A-Za-z])")) return lexIdentifier();
+        if (peek("[@A-Za-z]")) return lexIdentifier();
         if (peek("-|[0-9]")) return lexNumber();
         if (peek("'")) return lexCharacter();
         if (peek("\"")) return lexString();
-        // if (peek("\\\\")) lexEscape();
         return lexOperator();
     }
 
     public Token lexIdentifier() {
-        String pattern = chars.get(0) == '@' ? "[A-Za-z0-9_-]" : "[A-Za-z0-9_-]|'@'";
-        while (match(pattern));
+        chars.advance();
+        while (match("[A-Za-z0-9_-]"));
         return chars.emit(Token.Type.IDENTIFIER);
     }
 
     public Token lexNumber() {
         boolean decimal = false;
         String pattern = "[0-9]";
-        if (peek("-", "[^0-9]"))
+        if (peek("-", "[^0-9]") || (peek("-") && !chars.has(1)))
             return lexOperator();
         else match("-");
         if (peek("0", "[^.]")) {
@@ -87,8 +86,8 @@ public final class Lexer {
 
     public Token lexCharacter() {
         chars.advance();
-        if (match("\\\\", "[bnrt'\"]", "'") || match("[^\'\\n\\r\\\\]", "'")) return chars.emit(Token.Type.CHARACTER);
-        match("\\\\", "[bnrt'\"");
+        if (match("\\\\", "[bnrt'\"\\\\]", "'") || match("[^\'\\n\\r\\\\]", "'")) return chars.emit(Token.Type.CHARACTER);
+        match("\\\\", "[bnrt'\"\\\\]");
         match("[^\'\\n\\r\\\\]");
         throw new ParseException("Invalid character!", chars.index);
     }
@@ -97,13 +96,13 @@ public final class Lexer {
         chars.advance();
         do {
             if (chars.has(0) && match("\"")) return chars.emit(Token.Type.STRING);
-        } while (chars.has(0) && (match("[^\"\\n\\r\\\\]") || match("\\\\", "[bnrt'\"]")));
+        } while (chars.has(0) && (match("[^\"\\n\\r\\\\]") || match("\\\\", "[bnrt'\"\\\\]")));
         match("\\\\");
         throw new ParseException("Invalid string!", chars.index);
     }
 
     public void lexEscape() {
-        if (peek("\\\\", "[^bnrt'\"]")) {
+        if (peek("\\\\", "[^bnrt'\"\\\\]")) {
             match("\\\\");
             throw new ParseException("Invalid escape!", chars.index);
         }

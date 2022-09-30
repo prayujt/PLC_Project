@@ -40,6 +40,7 @@ public class LexerTests {
                 Arguments.of("Alphanumeric", "thelegend27", true),
                 Arguments.of("Single Character", "a", true),
                 Arguments.of("Hyphenated", "a-b-c", true),
+                Arguments.of("Leading AT", "@abc", true),
 
                 Arguments.of("Leading Hyphen", "-five", false),
                 Arguments.of("Leading Digit", "1fish2fish3fishbluefish", false),
@@ -95,6 +96,7 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Alphabetic", "\'c\'", true),
                 Arguments.of("Newline Escape", "\'\\n\'", true),
+                Arguments.of("Backslash Escape", "\'\\\\\'", true),
 
                 Arguments.of("Empty", "\'\'", false),
                 Arguments.of("Multiple", "\'abc\'", false),
@@ -115,6 +117,7 @@ public class LexerTests {
                 Arguments.of("Alphabetic", "\"abc\"", true),
                 Arguments.of("Newline Escape", "\"Hello,\\nWorld\"", true),
                 Arguments.of("Symbols", "\"!@#$%^&*()\"", true),
+                Arguments.of("Special Escapes", "\"sq\\'dq\\\"bs\\\\\"", true),
 
                 Arguments.of("Unterminated", "\"unterminated", false),
                 Arguments.of("Invalid Escape", "\"invalid\\escape\"", false),
@@ -135,6 +138,7 @@ public class LexerTests {
                 Arguments.of("Comparison", "!=", true),
                 Arguments.of("Symbol", "$", true),
                 Arguments.of("Plus Sign", "+", true),
+                Arguments.of("Hyphen", "-", true),
 
                 Arguments.of("Space", " ", false),
                 Arguments.of("Tab", "\t", false)
@@ -235,6 +239,86 @@ public class LexerTests {
                         new Token(Token.Type.INTEGER, "0", 0),
                         new Token(Token.Type.DECIMAL, "0.05", 1)
                 ))
+        );
+    }
+
+
+    @ParameterizedTest
+    @MethodSource
+    void testBigExample(String test, String input, List<Token> expected) {
+        test(input, expected, true);
+    }
+
+    private static Stream<Arguments> testBigExample() {
+        String source = new String("VAR i = -1 : Integer;\nVAL inc = 2 : Integer;\nFUN foo() DO\n    WHILE i != 1 DO\n        IF i > 0 DO\n            print(\"bar\");\n        END\n        i = i + inc;\n    END\nEND");
+
+        List<Token> input = Arrays.asList(
+            //VAR i = -1 : Integer;
+            new Token(Token.Type.IDENTIFIER, "VAR", 0),
+            new Token(Token.Type.IDENTIFIER, "i", 4),
+            new Token(Token.Type.OPERATOR, "=", 6),
+            new Token(Token.Type.INTEGER, "-1", 8),
+            new Token(Token.Type.OPERATOR, ":", 11),
+            new Token(Token.Type.IDENTIFIER, "Integer", 13),
+            new Token(Token.Type.OPERATOR, ";", 20),
+
+            //VAL inc = 2 : Integer;
+            new Token(Token.Type.IDENTIFIER, "VAL", 22),
+            new Token(Token.Type.IDENTIFIER, "inc", 26),
+            new Token(Token.Type.OPERATOR, "=", 30),
+            new Token(Token.Type.INTEGER, "2", 32),
+            new Token(Token.Type.OPERATOR, ":", 34),
+            new Token(Token.Type.IDENTIFIER, "Integer", 36),
+            new Token(Token.Type.OPERATOR, ";", 43),
+
+            //DEF foo() DO
+            new Token(Token.Type.IDENTIFIER, "FUN", 45),
+            new Token(Token.Type.IDENTIFIER, "foo", 49),
+            new Token(Token.Type.OPERATOR, "(", 52),
+            new Token(Token.Type.OPERATOR, ")", 53),
+            new Token(Token.Type.IDENTIFIER, "DO", 55),
+
+            //    WHILE i != 1 DO
+            new Token(Token.Type.IDENTIFIER, "WHILE", 62),
+            new Token(Token.Type.IDENTIFIER, "i", 68),
+            new Token(Token.Type.OPERATOR, "!=", 70),
+            new Token(Token.Type.INTEGER, "1", 73),
+            new Token(Token.Type.IDENTIFIER, "DO", 75),
+
+            //        IF i > 0 DO
+            new Token(Token.Type.IDENTIFIER, "IF", 86),
+            new Token(Token.Type.IDENTIFIER, "i", 89),
+            new Token(Token.Type.OPERATOR, ">", 91),
+            new Token(Token.Type.INTEGER, "0", 93),
+            new Token(Token.Type.IDENTIFIER, "DO", 95),
+
+            //            print(\"bar\");
+            new Token(Token.Type.IDENTIFIER, "print", 110),
+            new Token(Token.Type.OPERATOR, "(", 115),
+            new Token(Token.Type.STRING, "\"bar\"", 116),
+            new Token(Token.Type.OPERATOR, ")", 121),
+            new Token(Token.Type.OPERATOR, ";", 122),
+
+            //        END
+            new Token(Token.Type.IDENTIFIER, "END", 132),
+
+            //        i = i + inc;
+            new Token(Token.Type.IDENTIFIER, "i",144),
+            new Token(Token.Type.OPERATOR, "=", 146),
+            new Token(Token.Type.IDENTIFIER, "i", 148),
+            new Token(Token.Type.OPERATOR, "+", 150),
+            new Token(Token.Type.IDENTIFIER, "inc", 152),
+            new Token(Token.Type.OPERATOR, ";", 155),
+
+            //    END
+            new Token(Token.Type.IDENTIFIER, "END", 161),
+
+            //END
+            new Token(Token.Type.IDENTIFIER, "END", 165)
+        );
+
+        return Stream.of(
+                Arguments.of("Big Example", source, input)
         );
     }
 
