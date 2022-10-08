@@ -260,8 +260,8 @@ public final class Parser {
     public Ast.Expression parsePrimaryExpression() throws ParseException {
         String literal = tokens.get(0).getLiteral();
         if (match(Token.Type.INTEGER)) return new Ast.Expression.Literal(new BigInteger(literal));
-        if (match(Token.Type.DECIMAL)) return new Ast.Expression.Literal(new BigDecimal(literal));
-        if (match(Token.Type.CHARACTER)) {
+        else if (match(Token.Type.DECIMAL)) return new Ast.Expression.Literal(new BigDecimal(literal));
+        else if (match(Token.Type.CHARACTER)) {
             String character = literal.replace("'", "");
             char[] characters = character.toCharArray();
             if (characters.length == 2) {
@@ -287,7 +287,7 @@ public final class Parser {
             }
             return new Ast.Expression.Literal(new Character(characters[0]));
         }
-        if (match(Token.Type.STRING)) {
+        else if (match(Token.Type.STRING)) {
             String str = literal
                 .replace("\"", "")
                 .replace("\\b", "\b")
@@ -299,7 +299,7 @@ public final class Parser {
                 .replace("\\\\", "\\");
             return new Ast.Expression.Literal(str);
         }
-        if (match(Token.Type.IDENTIFIER)) {
+        else if (match(Token.Type.IDENTIFIER)) {
             if (literal == "TRUE") return new Ast.Expression.Literal(new Boolean(true));
             if (literal == "FALSE") return new Ast.Expression.Literal(new Boolean(false));
             else if (literal == "NIL") return new Ast.Expression.Literal(null);
@@ -319,14 +319,16 @@ public final class Parser {
             }
             return new Ast.Expression.Access(Optional.empty(), literal);
         }
-        if (match(Token.Type.OPERATOR)) {
-            if (literal == "(") {
-                Ast.Expression expression = parseExpression();
-                if (!match(")")) throw new ParseException("Missing end parentheses ", tokens.index);
-                return new Ast.Expression.Group(expression);
-            }
+        else if (match("(")) {
+        // if (match(Token.Type.OPERATOR)) {
+            // if (literal == "(") {
+            Ast.Expression expression = parseExpression();
+            if (!match(")")) throw new ParseException("Missing end parentheses ", tokens.index);
+            return new Ast.Expression.Group(expression);
+            // }
         }
-        return new Ast.Expression.Literal(literal);
+        // }
+        throw new ParseException("Not a valid expression", tokens.index);
     }
 
     /**
