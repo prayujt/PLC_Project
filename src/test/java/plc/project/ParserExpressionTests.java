@@ -37,6 +37,14 @@ final class ParserExpressionTests {
                                 new Token(Token.Type.OPERATOR, ";", 6)
                         ),
                         new Ast.Statement.Expression(new Ast.Expression.Function("name", Arrays.asList()))
+                ),
+                Arguments.of("Expression without semicolon",
+                        Arrays.asList(
+                                new Token(Token.Type.IDENTIFIER, "name", 0),
+                                new Token(Token.Type.OPERATOR, "(", 4),
+                                new Token(Token.Type.OPERATOR, ")", 5)
+                        ),
+                        null
                 )
         );
     }
@@ -61,7 +69,17 @@ final class ParserExpressionTests {
                                 new Ast.Expression.Access(Optional.empty(), "name"),
                                 new Ast.Expression.Access(Optional.empty(), "value")
                         )
+                ),
+                Arguments.of("Assignment without value",
+                        Arrays.asList(
+                                //name = value;
+                                new Token(Token.Type.IDENTIFIER, "name", 0),
+                                new Token(Token.Type.OPERATOR, "=", 5),
+                                new Token(Token.Type.OPERATOR, ";", 12)
+                        ),
+                        null
                 )
+
         );
     }
 

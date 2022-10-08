@@ -110,16 +110,21 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
         if (match("LET")) return parseDeclarationStatement();
+        if (match("SWITCH")) throw new UnsupportedOperationException(); //TODO
+        if (match("IF")) throw new UnsupportedOperationException(); //TODO
+        if (match("WHILE")) throw new UnsupportedOperationException(); //TODO
+        if (match("RETURN")) throw new UnsupportedOperationException(); //TODO
         else {
             Ast.Expression expression = parseExpression();
             if (match("=")) {
                 Ast.Expression expression2 = parseExpression();
                 if (!(expression instanceof Ast.Expression.Access)) throw new ParseException("Invalid left side of assignment!", tokens.index);
-                return new Ast.Statement.Assignment(expression, expression2);
+                if (match(";")) return new Ast.Statement.Assignment(expression, expression2);
+                else throw new ParseException("Missing Semicolon", tokens.index);
             }
-            return new Ast.Statement.Expression(expression);
+            if (match(";")) return new Ast.Statement.Expression(expression);
+            else throw new ParseException("Missing Semicolon", tokens.index);
         }
-        // throw new UnsupportedOperationException(); //TODO
     }
 
     /**
