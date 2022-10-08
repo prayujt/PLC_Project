@@ -204,7 +204,14 @@ public final class Parser {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
             Ast.Expression comparasionExpressionRight = parseComparisonExpression();
-            return new Ast.Expression.Binary(operator, comparasionExpressionLeft, comparasionExpressionRight);
+            Ast.Expression.Binary result =
+                new Ast.Expression.Binary(operator, comparasionExpressionLeft, comparasionExpressionRight);
+            while (peek("&&") || peek("||")) {
+                operator = tokens.get(0).getLiteral();
+                tokens.advance();
+                result = new Ast.Expression.Binary(operator, result, parseComparisonExpression());
+            }
+            return result;
         }
         return comparasionExpressionLeft;
     }
@@ -218,7 +225,14 @@ public final class Parser {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
             Ast.Expression additiveExpressionRight = parseAdditiveExpression();
-            return new Ast.Expression.Binary(operator, additiveExpressionLeft, additiveExpressionRight);
+            Ast.Expression.Binary result =
+                new Ast.Expression.Binary(operator, additiveExpressionLeft, additiveExpressionRight);
+            while (peek("<") || peek(">") || peek("==") || peek("!=")) {
+                operator = tokens.get(0).getLiteral();
+                tokens.advance();
+                result = new Ast.Expression.Binary(operator, result, parseAdditiveExpression());
+            }
+            return result;
         }
         return additiveExpressionLeft;
     }
@@ -232,7 +246,13 @@ public final class Parser {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
             Ast.Expression multiplicativeExpressionRight = parseMultiplicativeExpression();
-            return new Ast.Expression.Binary(operator, multiplicativeExpressionLeft, multiplicativeExpressionRight);
+            Ast.Expression.Binary result = new Ast.Expression.Binary(operator, multiplicativeExpressionLeft, multiplicativeExpressionRight);
+            while (peek("+") || peek("-")) {
+                operator = tokens.get(0).getLiteral();
+                tokens.advance();
+                result = new Ast.Expression.Binary(operator, result, parseMultiplicativeExpression());
+            }
+            return result;
         }
         return multiplicativeExpressionLeft;
     }
@@ -246,7 +266,13 @@ public final class Parser {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
             Ast.Expression primaryExpressionRight = parsePrimaryExpression();
-            return new Ast.Expression.Binary(operator, primaryExpressionLeft, primaryExpressionRight);
+            Ast.Expression.Binary result = new Ast.Expression.Binary(operator, primaryExpressionLeft, primaryExpressionRight);
+            while (peek("*") || peek("/") || peek("^")) {
+                operator = tokens.get(0).getLiteral();
+                tokens.advance();
+                result = new Ast.Expression.Binary(operator, result, parsePrimaryExpression());
+            }
+            return result;
         }
         return primaryExpressionLeft;
     }
@@ -306,9 +332,11 @@ public final class Parser {
             if (match("(")) {
                 ArrayList<Ast.Expression> arguments = new ArrayList<Ast.Expression>();
                 while (!match(")")) {
+                    if (peek(",")) throw new ParseException("Leading Comma", tokens.index);
                     Ast.Expression expression = parseExpression();
                     arguments.add(expression);
-                    if (!peek(")") && !match(",")) throw new ParseException("Missing Comma", tokens.index);
+                    if (!peek(")") && !peek(",")) throw new ParseException("Missing Comma", tokens.index);
+                    if (match(",") && match(")")) throw new ParseException("Trailing Comma", tokens.index);
                 }
                 return new Ast.Expression.Function(literal, arguments);
             }
@@ -320,14 +348,11 @@ public final class Parser {
             return new Ast.Expression.Access(Optional.empty(), literal);
         }
         else if (match("(")) {
-        // if (match(Token.Type.OPERATOR)) {
-            // if (literal == "(") {
             Ast.Expression expression = parseExpression();
-            if (!match(")")) throw new ParseException("Missing end parentheses ", tokens.index);
+            if (!match(")")) throw new ParseException("Missing end parentheses", tokens.index);
             return new Ast.Expression.Group(expression);
-            // }
         }
-        // }
+
         throw new ParseException("Not a valid expression", tokens.index);
     }
 
