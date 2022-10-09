@@ -184,6 +184,23 @@ final class ParserExpressionTests {
                                 new Ast.Expression.Access(Optional.empty(), "expr2")
                         )
                 ),
+                Arguments.of("Binary Equals Not Equals",
+                        Arrays.asList(
+                                //expr1 == expr2 != expr3
+                                new Token(Token.Type.IDENTIFIER, "expr1", 0),
+                                new Token(Token.Type.OPERATOR, "==", 6),
+                                new Token(Token.Type.IDENTIFIER, "expr2", 8),
+                                new Token(Token.Type.OPERATOR, "!=", 14),
+                                new Token(Token.Type.IDENTIFIER, "expr3", 15)
+                        ),
+                        new Ast.Expression.Binary("!=",
+                            new Ast.Expression.Binary("==",
+                                    new Ast.Expression.Access(Optional.empty(), "expr1"),
+                                    new Ast.Expression.Access(Optional.empty(), "expr2")
+                            ),
+                            new Ast.Expression.Access(Optional.empty(), "expr3")
+                        )
+                ),
                 Arguments.of("Binary Addition",
                         Arrays.asList(
                                 //expr1 + expr2

@@ -31,7 +31,15 @@ public final class Parser {
      * Parses the {@code source} rule.
      */
     public Ast.Source parseSource() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        List<Ast.Global> globals = new ArrayList<Ast.Global>();
+        List<Ast.Function> functions = new ArrayList<Ast.Function>();
+        while (peek("LIST") || peek("VAR") || peek("VAL")) {
+            globals.add(parseGlobal());
+        }
+        while (peek("FUN")) {
+            functions.add(parseFunction());
+        }
+        return new Ast.Source(globals, functions);
     }
 
     /**
@@ -39,7 +47,10 @@ public final class Parser {
      * next tokens start a global, aka {@code LIST|VAL|VAR}.
      */
     public Ast.Global parseGlobal() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("LIST")) return parseList();
+        else if (match("VAR")) return parseMutable();
+        else if (match("VAL")) return parseImmutable();
+        else throw new UnsupportedOperationException(); //TODO
     }
 
     /**
