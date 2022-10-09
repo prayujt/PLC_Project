@@ -137,7 +137,7 @@ public final class Parser {
             parameters.add(parameter);
             tokens.advance();
             if (!peek(")") && !peek(",")) throw new ParseException("Missing Comma", getIndex());
-            if (match(",") && match(")")) throw new ParseException("Trailing Comma", getIndex());
+            if (match(",") && peek(")")) throw new ParseException("Trailing Comma", getIndex());
         }
 
         if (!match("DO")) throw new ParseException("Missing DO!", getIndex());
@@ -426,7 +426,7 @@ public final class Parser {
                     Ast.Expression expression = parseExpression();
                     arguments.add(expression);
                     if (!peek(")") && !peek(",")) throw new ParseException("Missing Comma", getIndex());
-                    if (match(",") && match(")")) throw new ParseException("Trailing Comma", getIndex());
+                    if (match(",") && peek(")")) throw new ParseException("Trailing Comma", getIndex());
                 }
                 return new Ast.Expression.Function(literal, arguments);
             }
