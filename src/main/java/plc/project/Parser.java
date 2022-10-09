@@ -31,8 +31,8 @@ public final class Parser {
      * Parses the {@code source} rule.
      */
     public Ast.Source parseSource() throws ParseException {
-        ArrayList<Ast.Global> globals = new ArrayList<Ast.Global>();
-        ArrayList<Ast.Function> functions = new ArrayList<Ast.Function>();
+        List<Ast.Global> globals = new ArrayList<Ast.Global>();
+        List<Ast.Function> functions = new ArrayList<Ast.Function>();
         while (peek("LIST") || peek("VAR") || peek("VAL")) {
             globals.add(parseGlobal());
         }
@@ -62,7 +62,7 @@ public final class Parser {
      * next token declares a list, aka {@code LIST}.
      */
     public Ast.Global parseList() throws ParseException {
-        ArrayList<Ast.Expression> expressions = new ArrayList<Ast.Expression>();
+        List<Ast.Expression> expressions = new ArrayList<Ast.Expression>();
         String name;
 
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing identifier", tokens.index);
@@ -118,21 +118,28 @@ public final class Parser {
     public Ast.Function parseFunction() throws ParseException {
         match("FUN");
 
-        if (!peek(Token.Type.IDENTIFIER, "(")) throw new ParseException("Not a valid function opening!", tokens.index);
+        if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Not a valid function opening!", tokens.index);
         String functionName = tokens.get(0).getLiteral();
         tokens.advance();
 
-        ArrayList<String> parameters = new ArrayList<String>();
+        if (!match("(")) throw new ParseException("Missing opening parentheses!", tokens.index);
+
+        List<String> parameters = new ArrayList<String>();
+
         while (!match(")")) {
+            if (peek(",")) throw new ParseException("Leading Comma", tokens.index);
             if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Not a valid parameter!", tokens.index);
-            String parameterName = tokens.get(0).getLiteral();
-            parameters.add(parameterName);
-            if (!match(")") && !match(",")) throw new ParseException("Missing comma", tokens.index);
+            String parameter = tokens.get(0).getLiteral();
+            parameters.add(parameter);
+            tokens.advance();
+            if (!peek(")") && !peek(",")) throw new ParseException("Missing Comma", tokens.index);
+            if (match(",") && match(")")) throw new ParseException("Trailing Comma", tokens.index);
         }
 
         if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
         List<Ast.Statement> statements = parseBlock();
 
+        if (!match("END")) throw new ParseException("Missing END!", tokens.index);
         return new Ast.Function(functionName, parameters, statements);
     }
 
@@ -141,8 +148,8 @@ public final class Parser {
      * preceding token indicates the opening a block.
      */
     public List<Ast.Statement> parseBlock() throws ParseException {
-        ArrayList<Ast.Statement> statements = new ArrayList<Ast.Statement>();
-        while (!peek("END")) {
+        List<Ast.Statement> statements = new ArrayList<Ast.Statement>();
+        while (!peek("END")) { // TODO Check if there is another way to find when block ends
             statements.add(parseStatement());
         }
         return statements;
@@ -156,8 +163,27 @@ public final class Parser {
     public Ast.Statement parseStatement() throws ParseException {
         if (match("LET")) return parseDeclarationStatement();
         if (match("SWITCH")) throw new UnsupportedOperationException(); //TODO
-        if (match("IF")) throw new UnsupportedOperationException(); //TODO
-        if (match("WHILE")) throw new UnsupportedOperationException(); //TODO
+        if (match("IF")) {
+            Ast.Expression condition = parseExpression();
+            List<Ast.Statement> elseStatements = new ArrayList<Ast.Statement>();
+
+            if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
+            List<Ast.Statement> ifStatements = parseBlock();
+
+            if (match("ELSE")) elseStatements = parseBlock();
+
+            if (!match("END")) throw new ParseException("Missing END!", tokens.index);
+            return new Ast.Statement.If(condition, ifStatements, elseStatements);
+        }
+        if (match("WHILE")) {
+            Ast.Expression condition = parseExpression();
+
+            if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
+            List<Ast.Statement> statements = parseBlock();
+            if (!match("END")) throw new ParseException("Missing END!", tokens.index);
+
+            return new Ast.Statement.While(condition, statements);
+        }
         if (match("RETURN")) throw new UnsupportedOperationException(); //TODO
         else {
             Ast.Expression expression = parseExpression();
@@ -375,7 +401,7 @@ public final class Parser {
             if (literal == "FALSE") return new Ast.Expression.Literal(new Boolean(false));
             else if (literal == "NIL") return new Ast.Expression.Literal(null);
             if (match("(")) {
-                ArrayList<Ast.Expression> arguments = new ArrayList<Ast.Expression>();
+                List<Ast.Expression> arguments = new ArrayList<Ast.Expression>();
                 while (!match(")")) {
                     if (peek(",")) throw new ParseException("Leading Comma", tokens.index);
                     Ast.Expression expression = parseExpression();
