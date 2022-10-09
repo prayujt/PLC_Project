@@ -51,10 +51,9 @@ public final class Parser {
         if (match("LIST")) global = parseList();
         else if (match("VAR")) global = parseMutable();
         else if (match("VAL")) global = parseImmutable();
-        else throw new UnsupportedOperationException(); //TODO
 
-        if (match(";")) return global;
-        else throw new ParseException("Missing semicolon at the end", tokens.index);
+        if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+        return global;
     }
 
     /**
@@ -149,7 +148,7 @@ public final class Parser {
      */
     public List<Ast.Statement> parseBlock() throws ParseException {
         List<Ast.Statement> statements = new ArrayList<Ast.Statement>();
-        while (!peek("END")) { // TODO Check if there is another way to find when block ends
+        while (!peek("END") && !peek("CASE") && !peek("ELSE") && !peek("DEFAULT")) { // TODO Find another way to end block
             statements.add(parseStatement());
         }
         return statements;
@@ -162,50 +161,20 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
         if (match("LET")) return parseDeclarationStatement();
-
-        if (match("SWITCH")) {
-
-        }
-
-        if (match("IF")) {
-            Ast.Expression condition = parseExpression();
-            List<Ast.Statement> elseStatements = new ArrayList<Ast.Statement>();
-
-            if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
-            List<Ast.Statement> ifStatements = parseBlock();
-
-            if (match("ELSE")) elseStatements = parseBlock();
-
-            if (!match("END")) throw new ParseException("Missing END!", tokens.index);
-            return new Ast.Statement.If(condition, ifStatements, elseStatements);
-        }
-
-        if (match("WHILE")) {
-            Ast.Expression condition = parseExpression();
-
-            if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
-            List<Ast.Statement> statements = parseBlock();
-            if (!match("END")) throw new ParseException("Missing END!", tokens.index);
-
-            return new Ast.Statement.While(condition, statements);
-        }
-
-        if (match("RETURN")) {
-            Ast.Expression expression = parseExpression();
-            if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
-            return new Ast.Statement.Return(expression);
-        }
-
+        if (match("SWITCH")) return parseSwitchStatement();
+        if (match("IF")) return parseIfStatement();
+        if (match("WHILE")) return parseWhileStatement();
+        if (match("RETURN")) return parseReturnStatement();
         else {
             Ast.Expression expression = parseExpression();
             if (match("=")) {
                 Ast.Expression expression2 = parseExpression();
                 if (!(expression instanceof Ast.Expression.Access)) throw new ParseException("Invalid left side of assignment!", tokens.index);
-                if (match(";")) return new Ast.Statement.Assignment(expression, expression2);
-                else throw new ParseException("Missing Semicolon", tokens.index);
+                if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+                return new Ast.Statement.Assignment(expression, expression2);
             }
-            if (match(";")) return new Ast.Statement.Expression(expression);
-            else throw new ParseException("Missing Semicolon", tokens.index);
+            if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+            return new Ast.Statement.Expression(expression);
         }
     }
 
@@ -216,12 +185,14 @@ public final class Parser {
      */
     public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing variable name!", tokens.index);
-
         Optional<Ast.Expression> expression = Optional.empty();
+
         String name = tokens.get(0).getLiteral();
-        if (match(Token.Type.IDENTIFIER, "=")) {
-            expression = Optional.of(parseExpression());
-        }
+        tokens.advance();
+
+        if (match("=")) expression = Optional.of(parseExpression());
+        if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+
         return new Ast.Statement.Declaration(name, expression);
     }
 
@@ -231,7 +202,17 @@ public final class Parser {
      * {@code IF}.
      */
     public Ast.Statement.If parseIfStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression condition = parseExpression();
+        List<Ast.Statement> elseStatements = new ArrayList<Ast.Statement>();
+
+        if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
+        List<Ast.Statement> ifStatements = parseBlock();
+
+        if (match("ELSE")) elseStatements = parseBlock();
+
+        if (!match("END")) throw new ParseException("Missing END!", tokens.index);
+
+        return new Ast.Statement.If(condition, ifStatements, elseStatements);
     }
 
     /**
@@ -240,7 +221,17 @@ public final class Parser {
      * {@code SWITCH}.
      */
     public Ast.Statement.Switch parseSwitchStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression expression = parseExpression();
+        List<Ast.Statement.Case> cases = new ArrayList<Ast.Statement.Case>();
+        List<Ast.Statement> statements;
+
+        while (match("CASE")) cases.add(parseCaseStatement());
+
+        if (!match("DEFAULT")) throw new ParseException("Missing default case", tokens.index);
+        statements = parseBlock();
+        cases.add(new Ast.Statement.Case(Optional.empty(), statements));
+
+        return new Ast.Statement.Switch(expression, cases);
     }
 
     /**
@@ -249,7 +240,10 @@ public final class Parser {
      * default block of a switch statement, aka {@code CASE} or {@code DEFAULT}.
      */
     public Ast.Statement.Case parseCaseStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression condition = parseExpression();
+        if (!match(":")) throw new ParseException("Missing colon", tokens.index);
+        List<Ast.Statement> statements = parseBlock();
+        return new Ast.Statement.Case(Optional.of(condition), statements);
     }
 
     /**
@@ -258,7 +252,13 @@ public final class Parser {
      * {@code WHILE}.
      */
     public Ast.Statement.While parseWhileStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression condition = parseExpression();
+
+        if (!match("DO")) throw new ParseException("Missing DO!", tokens.index);
+        List<Ast.Statement> statements = parseBlock();
+        if (!match("END")) throw new ParseException("Missing END!", tokens.index);
+
+        return new Ast.Statement.While(condition, statements);
     }
 
     /**
@@ -267,7 +267,9 @@ public final class Parser {
      * {@code RETURN}.
      */
     public Ast.Statement.Return parseReturnStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression expression = parseExpression();
+        if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+        return new Ast.Statement.Return(expression);
     }
 
     /**
