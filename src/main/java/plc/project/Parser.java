@@ -162,7 +162,11 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
         if (match("LET")) return parseDeclarationStatement();
-        if (match("SWITCH")) throw new UnsupportedOperationException(); //TODO
+
+        if (match("SWITCH")) {
+
+        }
+
         if (match("IF")) {
             Ast.Expression condition = parseExpression();
             List<Ast.Statement> elseStatements = new ArrayList<Ast.Statement>();
@@ -175,6 +179,7 @@ public final class Parser {
             if (!match("END")) throw new ParseException("Missing END!", tokens.index);
             return new Ast.Statement.If(condition, ifStatements, elseStatements);
         }
+
         if (match("WHILE")) {
             Ast.Expression condition = parseExpression();
 
@@ -184,7 +189,13 @@ public final class Parser {
 
             return new Ast.Statement.While(condition, statements);
         }
-        if (match("RETURN")) throw new UnsupportedOperationException(); //TODO
+
+        if (match("RETURN")) {
+            Ast.Expression expression = parseExpression();
+            if (!match(";")) throw new ParseException("Missing semicolon", tokens.index);
+            return new Ast.Statement.Return(expression);
+        }
+
         else {
             Ast.Expression expression = parseExpression();
             if (match("=")) {
