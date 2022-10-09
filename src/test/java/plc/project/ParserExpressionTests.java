@@ -275,6 +275,14 @@ final class ParserExpressionTests {
                             ),
                             new Ast.Expression.Access(Optional.empty(), "expr3")
                         )
+                ),
+                Arguments.of("Missing Operand",
+                        Arrays.asList(
+                                //expr -
+                                new Token(Token.Type.IDENTIFIER, "expr", 0),
+                                new Token(Token.Type.OPERATOR, "-", 5)
+                        ),
+                        null
                 )
         );
     }
@@ -372,6 +380,43 @@ final class ParserExpressionTests {
         );
     }
 
+    @ParameterizedTest
+    @MethodSource
+    void testExceptions(String test, List<Token> tokens, Ast.Expression expected, int index, String message) {
+        testIndex(tokens, expected, Parser::parseExpression, index, message);
+    }
+
+    private static Stream<Arguments> testExceptions() {
+        return Stream.of(
+                Arguments.of("Invalid Expression",
+                        Arrays.asList(new Token(Token.Type.OPERATOR, "?", 0)),
+                        null,
+                        0,
+                        "Not a valid expression"
+                ),
+                Arguments.of("Missing Closing Parenthesis",
+                        Arrays.asList(
+                            new Token(Token.Type.OPERATOR, "(", 0),
+                            new Token(Token.Type.IDENTIFIER, "expr", 1)
+                        ),
+                        null,
+                        5,
+                        "Missing end parenthesis"
+                ),
+                Arguments.of("Invalid Closing Parenthesis",
+                        Arrays.asList(
+                            new Token(Token.Type.OPERATOR, "(", 0),
+                            new Token(Token.Type.IDENTIFIER, "expr", 1),
+                            new Token(Token.Type.OPERATOR, "]", 5)
+                        ),
+                        null,
+                        5,
+                        "Missing end parenthesis"
+                )
+        );
+    }
+
+
     /**
      * Standard test function. If expected is null, a ParseException is expected
      * to be thrown (not used in the provided tests).
@@ -385,4 +430,15 @@ final class ParserExpressionTests {
         }
     }
 
+    private static <T extends Ast> void testIndex(List<Token> tokens, T expected, Function<Parser, T> function, int index, String message) {
+        Parser parser = new Parser(tokens);
+        if (expected != null) {
+            Assertions.assertEquals(expected, function.apply(parser));
+        } else {
+            ParseException exception = Assertions.assertThrows(ParseException.class,
+                    () -> function.apply(parser));
+            Assertions.assertEquals(index, exception.getIndex());
+            Assertions.assertEquals(message, exception.getMessage());
+        }
+    }
 }
