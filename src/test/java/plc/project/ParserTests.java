@@ -579,6 +579,140 @@ final class ParserTests {
         test(input, expected, Parser::parseSource);
     }
 
+    void testExample2() {
+        List<Token> input = Arrays.asList(
+
+            //VAR i = -1;
+            new Token(Token.Type.IDENTIFIER, "VAR", 0),
+            new Token(Token.Type.IDENTIFIER, "i", 4),
+            new Token(Token.Type.OPERATOR, "=", 6),
+            new Token(Token.Type.INTEGER, "-1", 8),
+            new Token(Token.Type.OPERATOR, ";", 10),
+
+            //VAL inc = 2;
+            new Token(Token.Type.IDENTIFIER, "VAL", 12),
+            new Token(Token.Type.IDENTIFIER, "inc", 16),
+            new Token(Token.Type.OPERATOR, "=", 20),
+            new Token(Token.Type.INTEGER, "2", 22),
+            new Token(Token.Type.OPERATOR, ";", 23),
+
+            //FUN foo() DO
+            new Token(Token.Type.IDENTIFIER, "FUN", 25),
+            new Token(Token.Type.IDENTIFIER, "foo", 29),
+            new Token(Token.Type.OPERATOR, "(", 32),
+            new Token(Token.Type.OPERATOR, ")", 33),
+            new Token(Token.Type.IDENTIFIER, "DO", 35),
+
+            //    WHILE i != 1 DO
+            new Token(Token.Type.IDENTIFIER, "WHILE", 42),
+            new Token(Token.Type.IDENTIFIER, "i", 48),
+            new Token(Token.Type.OPERATOR, "!=", 50),
+            new Token(Token.Type.INTEGER, "1", 53),
+            new Token(Token.Type.IDENTIFIER, "DO", 55),
+
+            //        IF i > 0 DO
+            new Token(Token.Type.IDENTIFIER, "IF", 66),
+            new Token(Token.Type.IDENTIFIER, "i", 69),
+            new Token(Token.Type.OPERATOR, ">", 71),
+            new Token(Token.Type.INTEGER, "0", 73),
+            new Token(Token.Type.IDENTIFIER, "DO", 75),
+
+            //            print(\"bar\");
+            new Token(Token.Type.IDENTIFIER, "print", 90),
+            new Token(Token.Type.OPERATOR, "(", 95),
+            new Token(Token.Type.STRING, "\"bar\"", 96),
+            new Token(Token.Type.OPERATOR, ")", 101),
+            new Token(Token.Type.OPERATOR, ";", 102),
+
+            //        END
+            new Token(Token.Type.IDENTIFIER, "END", 112),
+
+            //        i = i + inc;
+            new Token(Token.Type.IDENTIFIER, "i",124),
+            new Token(Token.Type.OPERATOR, "=", 126),
+            new Token(Token.Type.IDENTIFIER, "i", 128),
+            new Token(Token.Type.OPERATOR, "+", 130),
+            new Token(Token.Type.IDENTIFIER, "inc", 132),
+            new Token(Token.Type.OPERATOR, ";", 135),
+
+            //    END
+            new Token(Token.Type.IDENTIFIER, "END", 141),
+
+            //END
+            new Token(Token.Type.IDENTIFIER, "END", 145)
+        );
+
+        Ast.Source expected = new Ast.Source(
+            Arrays.asList(
+                new Ast.Global("i", true, Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(-1)))),
+                new Ast.Global("inc", false, Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(2))))
+            ),
+            Arrays.asList(
+                new Ast.Function(
+                    "foo",
+                    Arrays.asList(),
+                    Arrays.asList(
+                        new Ast.Statement.While(
+                            new Ast.Expression.Binary(
+                                "!=",
+                                new Ast.Expression.Access(Optional.empty(), "i"),
+                                new Ast.Expression.Literal(BigInteger.ONE)
+                            ),
+                            Arrays.asList(
+                                new Ast.Statement.If(
+                                    new Ast.Expression.Binary(
+                                        ">",
+                                        new Ast.Expression.Access(Optional.empty(), "i"),
+                                        new Ast.Expression.Literal(BigInteger.ZERO)
+                                    ),
+                                    Arrays.asList(
+                                        new Ast.Statement.Expression(
+                                            new Ast.Expression.Function(
+                                                "print",
+                                                Arrays.asList(
+                                                    new Ast.Expression.Literal("bar")
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    Arrays.asList()
+                                ),
+                                new Ast.Statement.Assignment(
+                                    new Ast.Expression.Access(Optional.empty(), "i"),
+                                    new Ast.Expression.Binary(
+                                        "+",
+                                        new Ast.Expression.Access(Optional.empty(), "i"),
+                                        new Ast.Expression.Access(Optional.empty(), "inc")
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        );
+        test(input, expected, Parser::parseSource);
+    }
+
+    void testExample3() {
+        List<Token> input = Arrays.asList(
+            new Token(Token.Type.IDENTIFIER, "FUN", 0),
+            new Token(Token.Type.IDENTIFIER, "name", 3),
+            new Token(Token.Type.OPERATOR, "(", 7),
+            new Token(Token.Type.OPERATOR, ")", 8),
+            new Token(Token.Type.IDENTIFIER, "DO", 9),
+            new Token(Token.Type.IDENTIFIER, "stmt", 11),
+            new Token(Token.Type.OPERATOR, ";", 15),
+            new Token(Token.Type.IDENTIFIER, "END", 16),
+            new Token(Token.Type.IDENTIFIER, "VAR", 19),
+            new Token(Token.Type.IDENTIFIER, "name", 22),
+            new Token(Token.Type.OPERATOR, "=", 26),
+            new Token(Token.Type.IDENTIFIER, "expr", 27),
+            new Token(Token.Type.OPERATOR, ";", 31)
+        );
+
+        test(input, null, Parser::parseSource);
+    }
     /**
      * Standard test function. If expected is null, a ParseException is expected
      * to be thrown (not used in the provided tests).

@@ -44,6 +44,7 @@ public final class Parser {
         while (peek("FUN")) {
             functions.add(parseFunction());
         }
+        if (tokens.has(0)) throw new ParseException("Expressions outside of function declaration", getIndex());
         return new Ast.Source(globals, functions);
     }
 
@@ -378,7 +379,7 @@ public final class Parser {
         if (match(Token.Type.INTEGER)) return new Ast.Expression.Literal(new BigInteger(literal));
         else if (match(Token.Type.DECIMAL)) return new Ast.Expression.Literal(new BigDecimal(literal));
         else if (match(Token.Type.CHARACTER)) {
-            String character = literal.replace("'", "");
+            String character = literal.substring(1, literal.length() - 1);
             char[] characters = character.toCharArray();
             if (characters.length == 2) {
                 Character newChar;
@@ -401,11 +402,11 @@ public final class Parser {
                 }
                 return new Ast.Expression.Literal(new Character(newChar));
             }
+            if (characters[0] == '\\') throw new ParseException("Invalid character!", getIndex());
             return new Ast.Expression.Literal(new Character(characters[0]));
         }
         else if (match(Token.Type.STRING)) {
-            String str = literal
-                .replace("\"", "")
+            String str = literal.substring(1, literal.length() - 1)
                 .replace("\\b", "\b")
                 .replace("\\n", "\n")
                 .replace("\\r", "\r")
