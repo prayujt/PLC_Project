@@ -5,6 +5,8 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
@@ -45,7 +47,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Global ast) {
-        Environment.PlcObject valueObj = visit(ast.getValue().get());
+        Environment.PlcObject valueObj = Environment.NIL;
+
+        Optional<Ast.Expression> expression = ast.getValue();
+        if ((Object) expression != Optional.empty()) valueObj = visit(expression.get());
 
         scope.defineVariable(ast.getName(), ast.getMutable(), valueObj);
         return Environment.NIL;
@@ -74,7 +79,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Declaration ast) {
-        Environment.PlcObject valueObj = visit(ast.getValue().get());
+        Environment.PlcObject valueObj = Environment.NIL;
+
+        Optional<Ast.Expression> expression = ast.getValue();
+        if ((Object) expression != Optional.empty()) valueObj = visit(expression.get());
 
         scope.defineVariable(ast.getName(), true, valueObj);
         return Environment.NIL;
@@ -89,22 +97,19 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
         Environment.PlcObject valueObj = visit(ast.getValue());
 
-        if (!(valueObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid value to set variable to!");
-
-        Ast.Expression.Literal value = (Ast.Expression.Literal) valueObj.getValue();
-
         if ((Object) receiver.getOffset() == Optional.empty()) {
-            variable.setValue(Environment.create(value.getLiteral()));
+            variable.setValue(valueObj);
         }
         else {
             Ast.Expression indexExpression = receiver.getOffset().get();
             Environment.PlcObject indexObj = visit(indexExpression);
 
-            if (!(indexObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid index!");
-            int index = Integer.parseInt(((Ast.Expression.Literal) indexObj.getValue()).getLiteral().toString());
+            if (!(indexObj.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid index!");
+            int index = ((BigInteger) indexObj.getValue()).intValueExact();
+
             List<Object> array = (List<Object>) variable.getValue().getValue();
 
-            array.set(index, value.getLiteral());
+            array.set(index, valueObj.getValue());
             variable.setValue(Environment.create(array));
         }
 
@@ -149,7 +154,96 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Binary ast) {
-        throw new UnsupportedOperationException(); //TODO
+        Environment.PlcObject left = visit(ast.getLeft());
+        Environment.PlcObject right = Environment.NIL;
+        String operator = ast.getOperator();
+
+        Environment.PlcObject returnVal = Environment.NIL;
+
+        switch (operator) {
+            case "&&":
+                right = visit(ast.getRight());
+                if (!(left.getValue() instanceof Boolean && right.getValue() instanceof Boolean)) {
+                    throw new RuntimeException("Can't compare non-booleans with &&");
+                }
+                returnVal = Environment.create(((Boolean) left.getValue()).booleanValue() && ((Boolean) right.getValue()).booleanValue());
+                break;
+            case "||":
+                if (!(left.getValue() instanceof Boolean)) throw new RuntimeException("Can't compare non-booleans with ||");
+                boolean bool = ((Boolean) left.getValue()).booleanValue();
+                if (!bool) {
+                    if (!(right.getValue() instanceof Boolean)) throw new RuntimeException("Can't compare non-booleans with ||");
+                    right = visit(ast.getRight());
+                    returnVal = Environment.create(bool || ((Boolean) right.getValue()).booleanValue());
+                }
+                else returnVal = Environment.create(true);
+                break;
+            case "==":
+                right = visit(ast.getRight());
+                returnVal = Environment.create(Objects.equals(left.getValue(), right.getValue()));
+                break;
+            case "!=":
+                right = visit(ast.getRight());
+                returnVal = Environment.create(!(Objects.equals(left.getValue(), right.getValue())));
+                break;
+            case "+":
+                right = visit(ast.getRight());
+                if (left.getValue() instanceof String || right.getValue() instanceof String) {
+                    returnVal = Environment.create(left.getValue().toString() + right.getValue().toString());
+                }
+                else if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
+                    returnVal = Environment.create(((BigInteger) left.getValue()).add((BigInteger) (right.getValue())));
+                }
+                else if (left.getValue() instanceof BigDecimal && right.getValue() instanceof BigDecimal) {
+                    returnVal = Environment.create(((BigDecimal) left.getValue()).add((BigDecimal) (right.getValue())));
+                }
+                else throw new RuntimeException("Incorrect types!");
+                break;
+            case "-":
+                right = visit(ast.getRight());
+                if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
+                    returnVal = Environment.create(((BigInteger) left.getValue()).subtract((BigInteger) (right.getValue())));
+                }
+                else if (left.getValue() instanceof BigDecimal && right.getValue() instanceof BigDecimal) {
+                    returnVal = Environment.create(((BigDecimal) left.getValue()).subtract((BigDecimal) (right.getValue())));
+                }
+                else throw new RuntimeException("Incorrect types!");
+                break;
+            case "*":
+                right = visit(ast.getRight());
+                if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
+                    returnVal = Environment.create(((BigInteger) left.getValue()).multiply((BigInteger) (right.getValue())));
+                }
+                else if (left.getValue() instanceof BigDecimal && right.getValue() instanceof BigDecimal) {
+                    returnVal = Environment.create(((BigDecimal) left.getValue()).multiply((BigDecimal) (right.getValue())));
+                }
+                else throw new RuntimeException("Incorrect types!");
+                break;
+            case "/":
+                right = visit(ast.getRight());
+                if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
+                    returnVal = Environment.create(((BigInteger) left.getValue()).divide((BigInteger) (right.getValue())));
+                }
+                else if (left.getValue() instanceof BigDecimal && right.getValue() instanceof BigDecimal) {
+                    returnVal = Environment.create(((BigDecimal) left.getValue()).divide((BigDecimal) (right.getValue()), RoundingMode.HALF_EVEN));
+                }
+                else throw new RuntimeException("Incorrect types!");
+                break;
+            case "^":
+                right = visit(ast.getRight());
+                if (!(left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid types for this operator!");
+                BigInteger left_num = (BigInteger) left.getValue();
+                BigInteger right_num = (BigInteger) right.getValue();
+                for (BigInteger i = new BigInteger("1"); i.compareTo(right_num) == -1; i = i.add(new BigInteger("1"))) {
+                    left_num = left_num.multiply(left_num);
+                }
+                returnVal = Environment.create(left_num);
+                break;
+            default:
+                throw new RuntimeException("Invalid operator!");
+        }
+
+        return returnVal;
     }
 
     @Override
@@ -161,10 +255,11 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         else {
             Environment.PlcObject indexObj = visit(ast.getOffset().get());
 
-            if (!(indexObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid index!");
-            int index = Integer.parseInt(((Ast.Expression.Literal) indexObj.getValue()).getLiteral().toString());
+            if (!(indexObj.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid index!");
+            int index = ((BigInteger) indexObj.getValue()).intValueExact();
 
             List<Object> array = (List<Object>) variable.getValue().getValue();
+
             return Environment.create(array.get(index));
         }
     }
