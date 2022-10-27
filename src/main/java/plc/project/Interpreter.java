@@ -6,6 +6,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
@@ -25,17 +26,45 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Source ast) {
-        throw new UnsupportedOperationException(); //TODO
+        boolean mainFound = false;
+        Environment.PlcObject mainReturn = null;
+
+        for (Ast.Global global : ast.getGlobals()) {
+            visit(global);
+        }
+
+        for (Ast.Function function : ast.getFunctions()) {
+            Environment.PlcObject returnValue = visit(function);
+            if (function.getName() == "main" && function.getParameters().size() == 0) {
+                mainFound = true;
+                mainReturn = returnValue;
+            }
+        }
+        return mainReturn;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Global ast) {
-        throw new UnsupportedOperationException(); //TODO
+        Environment.PlcObject valueObj = visit(ast.getValue().get());
+
+        scope.defineVariable(ast.getName(), ast.getMutable(), valueObj);
+        return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+        scope = new Scope(scope);
+
+        for (String parameter : ast.getParameters()) {
+            scope.defineVariable(parameter, true, Environment.NIL);
+        }
+
+        for (Ast.Statement statement : ast.getStatements()) {
+            visit(statement);
+        }
+
+        scope = scope.getParent();
+        return Environment.NIL;
     }
 
     @Override
@@ -45,12 +74,41 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Declaration ast) {
-        throw new UnsupportedOperationException(); //TODO (in lecture)
+        Environment.PlcObject valueObj = visit(ast.getValue().get());
+
+        scope.defineVariable(ast.getName(), true, valueObj);
+        return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Assignment ast) {
-        throw new UnsupportedOperationException(); //TODO
+        if (!(ast.getReceiver() instanceof Ast.Expression.Access)) throw new RuntimeException("Reciever is not of type Ast.Expression.Access!");
+
+        Ast.Expression.Access receiver = (Ast.Expression.Access) ast.getReceiver();
+        Environment.Variable variable = scope.lookupVariable(receiver.getName());
+
+        Environment.PlcObject valueObj = visit(ast.getValue());
+
+        if (!(valueObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid value to set variable to!");
+
+        Ast.Expression.Literal value = (Ast.Expression.Literal) valueObj.getValue();
+
+        if ((Object) receiver.getOffset() == Optional.empty()) {
+            variable.setValue(Environment.create(value.getLiteral()));
+        }
+        else {
+            Ast.Expression indexExpression = receiver.getOffset().get();
+            Environment.PlcObject indexObj = visit(indexExpression);
+
+            if (!(indexObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid index!");
+            int index = Integer.parseInt(((Ast.Expression.Literal) indexObj.getValue()).getLiteral().toString());
+            List<Object> array = (List<Object>) variable.getValue().getValue();
+
+            array.set(index, value.getLiteral());
+            variable.setValue(Environment.create(array));
+        }
+
+        return Environment.NIL;
     }
 
     @Override
@@ -80,12 +138,13 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Literal ast) {
-        return Environment.create(ast);
+        if (ast.getLiteral() == null) return Environment.NIL;
+        return Environment.create(ast.getLiteral());
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Group ast) {
-        throw new UnsupportedOperationException(); //TODO
+        return visit(ast.getExpression());
     }
 
     @Override
@@ -95,7 +154,19 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Access ast) {
-        throw new UnsupportedOperationException(); //TODO
+        Environment.Variable variable = scope.lookupVariable(ast.getName());
+        if ((Object) ast.getOffset() == Optional.empty()) {
+            return variable.getValue();
+        }
+        else {
+            Environment.PlcObject indexObj = visit(ast.getOffset().get());
+
+            if (!(indexObj.getValue() instanceof Ast.Expression.Literal)) throw new RuntimeException("Invalid index!");
+            int index = Integer.parseInt(((Ast.Expression.Literal) indexObj.getValue()).getLiteral().toString());
+
+            List<Object> array = (List<Object>) variable.getValue().getValue();
+            return Environment.create(array.get(index));
+        }
     }
 
     @Override
@@ -105,7 +176,12 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.PlcList ast) {
-        throw new UnsupportedOperationException(); //TODO
+        List<Ast.Expression> array = ast.getValues();
+        ArrayList<Object> newArray = new ArrayList<Object>();
+        for (Ast.Expression literal : array) {
+            newArray.add(((Ast.Expression.Literal) literal).getLiteral());
+        }
+        return Environment.create(newArray);
     }
 
     /**
