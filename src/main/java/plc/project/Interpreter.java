@@ -58,23 +58,35 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
-        scope = new Scope(scope);
+        List<String> placeholders = ast.getParameters();
 
-        for (String parameter : ast.getParameters()) {
-            scope.defineVariable(parameter, true, Environment.NIL);
-        }
+        java.util.function.Function<List<Environment.PlcObject>, Environment.PlcObject> function = arguments -> {
+            scope = new Scope(scope);
+            for (int i = 0; i < arguments.size(); i++) {
+                Object parameterValue = arguments.get(i).getValue();
+                scope.defineVariable(placeholders.get(i), true, Environment.create(parameterValue));
+            }
+            try {
+                for (Ast.Statement statement : ast.getStatements()) {
+                    visit(statement);
+                }
+                scope = scope.getParent();
+            }
+            catch (Return r) {
+                scope = scope.getParent();
+                return r.value;
+            }
+            return Environment.NIL;
+        };
+        scope.defineFunction(ast.getName(), placeholders.size(), function);
 
-        for (Ast.Statement statement : ast.getStatements()) {
-            visit(statement);
-        }
-
-        scope = scope.getParent();
         return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Expression ast) {
-        throw new UnsupportedOperationException(); //TODO
+        visit(ast.getExpression());
+        return Environment.NIL;
     }
 
     @Override
@@ -173,8 +185,8 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         for (Ast.Statement statement : ast.getStatements()) {
             visit(statement);
         }
-        return Environment.NIL;
         scope = scope.getParent();
+        return Environment.NIL;
     }
 
     @Override
@@ -186,7 +198,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Return ast) {
-        throw new UnsupportedOperationException(); //TODO
+        throw new Return(visit(ast.getValue()));
     }
 
     @Override
@@ -327,7 +339,15 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+        List<Ast.Expression> arguments = ast.getArguments();
+        List<Environment.PlcObject> argumentResults = new ArrayList<Environment.PlcObject>();
+
+        for (Ast.Expression expression : arguments) {
+            argumentResults.add(visit(expression));
+        }
+
+        Environment.Function function = scope.lookupFunction(ast.getName(), arguments.size());
+        return function.invoke(argumentResults);
     }
 
     @Override

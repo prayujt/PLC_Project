@@ -98,7 +98,7 @@ final class InterpreterTests {
                         Arrays.asList(),
                         BigInteger.ZERO
                 ),
-                // FUN square(x) DO RETURN x * x; END
+                // FUN main(x) DO RETURN x * x; END
                 Arguments.of("Arguments",
                         new Ast.Function("main", Arrays.asList("x"), Arrays.asList(
                                 new Ast.Statement.Return(new Ast.Expression.Binary("*",
