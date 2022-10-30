@@ -104,7 +104,11 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             Ast.Expression indexExpression = receiver.getOffset().get();
             Environment.PlcObject indexObj = visit(indexExpression);
 
-            if (!(indexObj.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid index!");
+            try {
+                requireType(Class.forName("BigInteger"), indexObj);
+            }
+            catch (ClassNotFoundException e) {}
+
             int index = ((BigInteger) indexObj.getValue()).intValueExact();
 
             List<Object> array = (List<Object>) variable.getValue().getValue();
@@ -118,21 +122,65 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.If ast) {
-        throw new UnsupportedOperationException(); //TODO
+        scope = new Scope(scope);
+        Environment.PlcObject conditionEval = visit(ast.getCondition());
+
+        try {
+            requireType(Class.forName("Boolean"), conditionEval);
+        }
+        catch (ClassNotFoundException e) {}
+        if ((Boolean) conditionEval.getValue()) {
+            List<Ast.Statement> thenStatements = ast.getThenStatements();
+            for (Ast.Statement statement : thenStatements) visit(statement);
+        }
+        else {
+            List<Ast.Statement> elseStatements = ast.getElseStatements();
+            for (Ast.Statement statement : elseStatements) visit(statement);
+        }
+        scope = scope.getParent();
+        return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Switch ast) {
-        throw new UnsupportedOperationException(); //TODO
+        scope = new Scope(scope);
+        Environment.PlcObject conditionEval = visit(ast.getCondition());
+        List<Ast.Statement.Case> cases = ast.getCases();
+        Ast.Statement.Case defaultCase = null;
+        boolean foundCase = false;
+
+        for (Ast.Statement.Case _case : cases) {
+            if (((Object) _case.getValue()) == Optional.empty()) {
+                defaultCase = _case;
+                continue;
+            }
+            if (_case.getValue().equals(conditionEval.getValue())) {
+                foundCase = true;
+                visit(_case);
+            }
+        }
+
+        if (!foundCase) {
+            visit(defaultCase);
+        }
+        scope = scope.getParent();
+        return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Case ast) {
-        throw new UnsupportedOperationException(); //TODO
+        scope = new Scope(scope);
+        for (Ast.Statement statement : ast.getStatements()) {
+            visit(statement);
+        }
+        return Environment.NIL;
+        scope = scope.getParent();
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.While ast) {
+        scope = new Scope(scope);
+        scope = scope.getParent();
         throw new UnsupportedOperationException(); //TODO (in lecture)
     }
 
@@ -163,16 +211,25 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         switch (operator) {
             case "&&":
                 right = visit(ast.getRight());
-                if (!(left.getValue() instanceof Boolean && right.getValue() instanceof Boolean)) {
-                    throw new RuntimeException("Can't compare non-booleans with &&");
+                try {
+                    requireType(Class.forName("Boolean"), left);
+                    requireType(Class.forName("Boolean"), right);
                 }
+                catch (ClassNotFoundException e) {}
+
                 returnVal = Environment.create(((Boolean) left.getValue()).booleanValue() && ((Boolean) right.getValue()).booleanValue());
                 break;
             case "||":
-                if (!(left.getValue() instanceof Boolean)) throw new RuntimeException("Can't compare non-booleans with ||");
+                try {
+                    requireType(Class.forName("Boolean"), left);
+                }
+                catch (ClassNotFoundException e) {}
                 boolean bool = ((Boolean) left.getValue()).booleanValue();
                 if (!bool) {
-                    if (!(right.getValue() instanceof Boolean)) throw new RuntimeException("Can't compare non-booleans with ||");
+                    try {
+                        requireType(Class.forName("Boolean"), right);
+                    }
+                    catch (ClassNotFoundException e) {}
                     right = visit(ast.getRight());
                     returnVal = Environment.create(bool || ((Boolean) right.getValue()).booleanValue());
                 }
@@ -255,7 +312,11 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         else {
             Environment.PlcObject indexObj = visit(ast.getOffset().get());
 
-            if (!(indexObj.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid index!");
+            try {
+                requireType(Class.forName("BigInteger"), indexObj);
+            }
+            catch (ClassNotFoundException e) {}
+
             int index = ((BigInteger) indexObj.getValue()).intValueExact();
 
             List<Object> array = (List<Object>) variable.getValue().getValue();
