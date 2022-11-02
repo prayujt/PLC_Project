@@ -45,7 +45,20 @@ final class InterpreterTests {
                                         new Ast.Expression.Access(Optional.empty(), "x"),
                                         new Ast.Expression.Access(Optional.empty(), "y")                                ))
                         )))
-                ), Environment.NIL.getValue())
+                ), Environment.NIL.getValue()),
+                // VAR x = 1; VAR y = 10; FUN main() DO RETURN x + y; END
+                Arguments.of("Globals & Return", new Ast.Source(
+                        Arrays.asList(
+                                new Ast.Global("x", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
+                                new Ast.Global("y", true, Optional.of(new Ast.Expression.Literal(BigInteger.TEN)))
+                        ),
+                        Arrays.asList(new Ast.Function("main", Arrays.asList(), Arrays.asList(
+                            new Ast.Statement.Return(
+                                new Ast.Expression.Binary("+",
+                                        new Ast.Expression.Access(Optional.empty(), "x"),
+                                        new Ast.Expression.Access(Optional.empty(), "y")                                ))
+                        )))
+                ), new BigInteger("11"))
         );
     }
 

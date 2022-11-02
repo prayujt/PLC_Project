@@ -29,26 +29,20 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Source ast) {
-        boolean mainFound = false;
-        Environment.PlcObject mainReturn = Environment.NIL;
-        // expression to run main function
-        Ast.Expression.Function mainFunction =
-            new Ast.Expression.Function("main", Arrays.asList());
-
         for (Ast.Global global : ast.getGlobals()) {
             visit(global);
         }
 
         for (Ast.Function function : ast.getFunctions()) {
             visit(function);
-            if (function.getName() == "main" && function.getParameters().size() == 0) {
-                mainFound = true;
-                // run main function
-                mainReturn = visit(mainFunction);
-            }
         }
-        if (!mainFound) throw new RuntimeException("No main function!");
-        return mainReturn;
+
+        // expression to run main function
+        Ast.Expression.Function mainFunction =
+            new Ast.Expression.Function("main", Arrays.asList());
+
+        // will automatically throw exception if main function is not found
+        return visit(mainFunction);
     }
 
     @Override
