@@ -1,5 +1,7 @@
 package plc.project;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -59,9 +61,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
         List<String> placeholders = ast.getParameters();
-
+        Scope originalScope = scope;
         java.util.function.Function<List<Environment.PlcObject>, Environment.PlcObject> function = arguments -> {
-            scope = new Scope(scope);
+            Scope tempScope = scope;
+            scope = new Scope(originalScope);
             for (int i = 0; i < arguments.size(); i++) {
                 Object parameterValue = arguments.get(i).getValue();
                 scope.defineVariable(placeholders.get(i), true, Environment.create(parameterValue));
@@ -70,11 +73,12 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 for (Ast.Statement statement : ast.getStatements()) {
                     visit(statement);
                 }
-                scope = scope.getParent();
             }
             catch (Return r) {
-                scope = scope.getParent();
                 return r.value;
+            }
+            finally {
+                scope = tempScope;
             }
             return Environment.NIL;
         };
@@ -110,7 +114,8 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         Environment.PlcObject valueObj = visit(ast.getValue());
 
         if ((Object) receiver.getOffset() == Optional.empty()) {
-            variable.setValue(valueObj);
+            if (variable.getMutable()) variable.setValue(valueObj);
+            else throw new RuntimeException("Trying to change unmutable variable!");
         }
         else {
             Ast.Expression indexExpression = receiver.getOffset().get();
@@ -126,7 +131,8 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             List<Object> array = (List<Object>) variable.getValue().getValue();
 
             array.set(index, valueObj.getValue());
-            variable.setValue(Environment.create(array));
+            if (variable.getMutable()) variable.setValue(Environment.create(array));
+            else throw new RuntimeException("Trying to change unmutable variable!");
         }
 
         return Environment.NIL;
@@ -382,6 +388,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
             List<Object> array = (List<Object>) variable.getValue().getValue();
 
+            if (index >= array.size()) throw new RuntimeException("Index out of range!");
             return Environment.create(array.get(index));
         }
     }

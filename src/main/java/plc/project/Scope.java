@@ -58,7 +58,7 @@ public final class Scope {
     @Override
     public String toString() {
         return "Scope{" +
-                "parent=" + parent +
+                // "parent=" + parent +
                 ", variables=" + variables +
                 ", functions=" + functions +
                 '}';
