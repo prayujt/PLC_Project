@@ -121,10 +121,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             Ast.Expression indexExpression = receiver.getOffset().get();
             Environment.PlcObject indexObj = visit(indexExpression);
 
-            try {
-                requireType(Class.forName("BigInteger"), indexObj);
-            }
-            catch (ClassNotFoundException e) {}
+            requireType(BigInteger.class, indexObj);
 
             int index = ((BigInteger) indexObj.getValue()).intValueExact();
 
@@ -143,10 +140,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         scope = new Scope(scope);
         Environment.PlcObject conditionEval = visit(ast.getCondition());
 
-        try {
-            requireType(Class.forName("Boolean"), conditionEval);
-        }
-        catch (ClassNotFoundException e) {}
+        requireType(Boolean.class, conditionEval);
         if ((Boolean) conditionEval.getValue()) {
             List<Ast.Statement> thenStatements = ast.getThenStatements();
             for (Ast.Statement statement : thenStatements) visit(statement);
@@ -201,10 +195,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         scope = new Scope(scope);
 
         Environment.PlcObject condition = visit(ast.getCondition());
-        try {
-            requireType(Class.forName("Boolean"), condition);
-        }
-        catch (ClassNotFoundException e) {}
+        requireType(Boolean.class, condition);
 
         List<Ast.Statement> statements = ast.getStatements();
         while ((Boolean) visit(ast.getCondition()).getValue()) {
@@ -236,75 +227,71 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     @Override
     public Environment.PlcObject visit(Ast.Expression.Binary ast) {
         Environment.PlcObject left = visit(ast.getLeft());
-        Environment.PlcObject right = Environment.NIL;
+         // right = Environment.NIL;
         String operator = ast.getOperator();
 
         Environment.PlcObject returnVal = Environment.NIL;
 
         switch (operator) {
-            case "&&":
-                right = visit(ast.getRight());
-                try {
-                    requireType(Class.forName("Boolean"), left);
-                    requireType(Class.forName("Boolean"), right);
+            case "&&": {
+                requireType(Boolean.class, left);
+                Boolean bool = ((Boolean) left.getValue()).booleanValue();
+                if (bool) {
+                    Environment.PlcObject right = visit(ast.getRight());
+                    requireType(Boolean.class, right);
+                    returnVal = Environment.create(((Boolean) right.getValue()).booleanValue());
                 }
-                catch (ClassNotFoundException e) {}
-
-                returnVal = Environment.create(((Boolean) left.getValue()).booleanValue() && ((Boolean) right.getValue()).booleanValue());
+                else returnVal = Environment.create(false);
                 break;
-            case "||":
-                try {
-                    requireType(Class.forName("Boolean"), left);
-                }
-                catch (ClassNotFoundException e) {}
-                boolean bool = ((Boolean) left.getValue()).booleanValue();
+            }
+            case "||": {
+                requireType(Boolean.class, left);
+                Boolean bool = ((Boolean) left.getValue()).booleanValue();
                 if (!bool) {
-                    try {
-                        requireType(Class.forName("Boolean"), right);
-                    }
-                    catch (ClassNotFoundException e) {}
-                    right = visit(ast.getRight());
-                    returnVal = Environment.create(bool || ((Boolean) right.getValue()).booleanValue());
+                    Environment.PlcObject right = visit(ast.getRight());
+                    requireType(Boolean.class, right);
+                    returnVal = Environment.create(((Boolean) right.getValue()).booleanValue());
                 }
                 else returnVal = Environment.create(true);
                 break;
-            case "<":
-                right = visit(ast.getRight());
-                try {
-                    requireType(Class.forName("Comparable"), left);
-                    requireType(Class.forName("Comparable"), right);
-                }
-                catch (ClassNotFoundException e) {}
+            }
+
+            case "<": {
+                Environment.PlcObject right = visit(ast.getRight());
+                requireType(Comparable.class, left);
+                requireType(Comparable.class, right);
+                requireType(right.getValue().getClass(), left);
 
                 Comparable<Object> leftObj = (Comparable<Object>) left.getValue();
                 Comparable<Object> rightObj = (Comparable<Object>) right.getValue();
                 returnVal = Environment.create(leftObj.compareTo(rightObj) < 0);
                 break;
-            case ">":
-                right = visit(ast.getRight());
-                try {
-                    requireType(Class.forName("Comparable"), left);
-                    requireType(Class.forName("Comparable"), right);
-                }
-                catch (ClassNotFoundException e) {}
+            }
+            case ">": {
+                Environment.PlcObject right = visit(ast.getRight());
+                requireType(Comparable.class, left);
+                requireType(Comparable.class, right);
+                requireType(right.getValue().getClass(), left);
 
-                leftObj = (Comparable<Object>) left.getValue();
-                rightObj = (Comparable<Object>) right.getValue();
+                Comparable<Object> leftObj = (Comparable<Object>) left.getValue();
+                Comparable<Object> rightObj = (Comparable<Object>) right.getValue();
                 returnVal = Environment.create(leftObj.compareTo(rightObj) > 0);
                 break;
+            }
 
-            case "==":
-                right = visit(ast.getRight());
+            case "==": {
+                Environment.PlcObject right = visit(ast.getRight());
                 returnVal = Environment.create(Objects.equals(left.getValue(), right.getValue()));
                 break;
-
-            case "!=":
-                right = visit(ast.getRight());
+            }
+            case "!=": {
+                Environment.PlcObject right = visit(ast.getRight());
                 returnVal = Environment.create(!(Objects.equals(left.getValue(), right.getValue())));
                 break;
+            }
 
-            case "+":
-                right = visit(ast.getRight());
+            case "+": {
+                Environment.PlcObject right = visit(ast.getRight());
 
                 if (left.getValue() instanceof String || right.getValue() instanceof String) {
                     returnVal = Environment.create(left.getValue().toString() + right.getValue().toString());
@@ -318,9 +305,9 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
                 else throw new RuntimeException("Incorrect types!");
                 break;
-
-            case "-":
-                right = visit(ast.getRight());
+            }
+            case "-": {
+                Environment.PlcObject right = visit(ast.getRight());
                 if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
                     returnVal = Environment.create(((BigInteger) left.getValue()).subtract((BigInteger) (right.getValue())));
                 }
@@ -329,9 +316,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 }
                 else throw new RuntimeException("Incorrect types!");
                 break;
+            }
 
-            case "*":
-                right = visit(ast.getRight());
+            case "*": {
+                Environment.PlcObject right = visit(ast.getRight());
                 if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
                     returnVal = Environment.create(((BigInteger) left.getValue()).multiply((BigInteger) (right.getValue())));
                 }
@@ -340,28 +328,35 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 }
                 else throw new RuntimeException("Incorrect types!");
                 break;
+            }
 
-            case "/":
-                right = visit(ast.getRight());
+            case "/": {
+                Environment.PlcObject right = visit(ast.getRight());
                 if (left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger) {
+                    if (right.getValue().equals(0)) throw new RuntimeException("Can't divide by zero!");
                     returnVal = Environment.create(((BigInteger) left.getValue()).divide((BigInteger) (right.getValue())));
                 }
                 else if (left.getValue() instanceof BigDecimal && right.getValue() instanceof BigDecimal) {
+                    if (right.getValue().equals(0)) throw new RuntimeException("Can't divide by zero!");
                     returnVal = Environment.create(((BigDecimal) left.getValue()).divide((BigDecimal) (right.getValue()), RoundingMode.HALF_EVEN));
                 }
                 else throw new RuntimeException("Incorrect types!");
                 break;
+            }
 
-            case "^":
-                right = visit(ast.getRight());
-                if (!(left.getValue() instanceof BigInteger && right.getValue() instanceof BigInteger)) throw new RuntimeException("Invalid types for this operator!");
+            case "^": {
+                Environment.PlcObject right = visit(ast.getRight());
+                requireType(BigInteger.class, left);
+                requireType(BigInteger.class, right);
                 BigInteger left_num = (BigInteger) left.getValue();
                 BigInteger right_num = (BigInteger) right.getValue();
+                BigInteger temp = left_num;
                 for (BigInteger i = new BigInteger("1"); i.compareTo(right_num) == -1; i = i.add(new BigInteger("1"))) {
-                    left_num = left_num.multiply(left_num);
+                    temp = temp.multiply(left_num);
                 }
-                returnVal = Environment.create(left_num);
+                returnVal = Environment.create(temp);
                 break;
+            }
 
             default:
                 throw new RuntimeException("Invalid operator!");
@@ -379,10 +374,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         else {
             Environment.PlcObject indexObj = visit(ast.getOffset().get());
 
-            try {
-                requireType(Class.forName("BigInteger"), indexObj);
-            }
-            catch (ClassNotFoundException e) {}
+            requireType(BigInteger.class, indexObj);
 
             int index = ((BigInteger) indexObj.getValue()).intValueExact();
 

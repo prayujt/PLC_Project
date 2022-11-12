@@ -228,11 +228,11 @@ final class InterpreterTests {
 
     @ParameterizedTest
     @MethodSource
-    void testIfStatement(String test, Ast.Statement.If ast, Object expected) {
+    void testIfStatement(String test, Ast.Statement.If ast, Object expected, Object expected2) {
         Scope scope = new Scope(null);
         scope.defineVariable("num", true, Environment.NIL);
-        test(ast, Environment.NIL.getValue(), scope);
-        Assertions.assertEquals(expected, scope.lookupVariable("num").getValue().getValue());
+        test(ast, expected2, scope);
+        if (expected2 != null) Assertions.assertEquals(expected, scope.lookupVariable("num").getValue().getValue());
     }
 
     private static Stream<Arguments> testIfStatement() {
@@ -244,7 +244,8 @@ final class InterpreterTests {
                                 Arrays.asList(new Ast.Statement.Assignment(new Ast.Expression.Access(Optional.empty(),"num"), new Ast.Expression.Literal(BigInteger.ONE))),
                                 Arrays.asList()
                         ),
-                        BigInteger.ONE
+                        BigInteger.ONE,
+                        Environment.NIL.getValue()
                 ),
                 // IF FALSE DO ELSE num = 10; END
                 Arguments.of("False Condition",
@@ -253,7 +254,18 @@ final class InterpreterTests {
                                 Arrays.asList(),
                                 Arrays.asList(new Ast.Statement.Assignment(new Ast.Expression.Access(Optional.empty(),"num"), new Ast.Expression.Literal(BigInteger.TEN)))
                         ),
-                        BigInteger.TEN
+                        BigInteger.TEN,
+                        Environment.NIL.getValue()
+                ),
+                // IF 0 DO print(5); ELSE print(10); END
+                Arguments.of("Invalid Condition",
+                        new Ast.Statement.If(
+                                new Ast.Expression.Literal(0),
+                                Arrays.asList(),
+                                Arrays.asList(new Ast.Statement.Assignment(new Ast.Expression.Access(Optional.empty(),"num"), new Ast.Expression.Literal(BigInteger.TEN)))
+                        ),
+                        null,
+                        null
                 )
         );
     }
@@ -309,6 +321,24 @@ final class InterpreterTests {
                 ))
         ),Environment.NIL.getValue(), scope);
         Assertions.assertEquals(BigInteger.TEN, scope.lookupVariable("num").getValue().getValue());
+    }
+
+    @Test
+    void testInvalidWhileStatement() {
+        // WHILE 1 DO num = num + 1; END
+        Scope scope = new Scope(null);
+        scope.defineVariable("num", true, Environment.create(BigInteger.ZERO));
+        Assertions.assertThrows(RuntimeException.class, () ->
+            test(new Ast.Statement.While(
+                    new Ast.Expression.Literal(BigInteger.ONE),
+                    Arrays.asList(new Ast.Statement.Assignment(
+                            new Ast.Expression.Access(Optional.empty(),"num"),
+                            new Ast.Expression.Binary("+",
+                                    new Ast.Expression.Access(Optional.empty(),"num"),
+                                    new Ast.Expression.Literal(BigInteger.ONE)
+                            )
+                    ))
+            ),Environment.NIL.getValue(), scope));
     }
 
     @ParameterizedTest
@@ -379,6 +409,22 @@ final class InterpreterTests {
                         ),
                         true
                 ),
+                // FALSE && undefined
+                Arguments.of("And (Short Circuit)",
+                        new Ast.Expression.Binary("&&",
+                                new Ast.Expression.Literal(false),
+                                new Ast.Expression.Access(Optional.empty(), "undefined")
+                        ),
+                        false
+                ),
+                // FALSE || 0
+                Arguments.of("Invalid Type",
+                        new Ast.Expression.Binary("||",
+                                new Ast.Expression.Literal(false),
+                                new Ast.Expression.Literal(0)
+                        ),
+                        null
+                ),
                 // 1 < 10
                 Arguments.of("Less Than",
                         new Ast.Expression.Binary("<",
@@ -386,6 +432,14 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(BigInteger.TEN)
                         ),
                         true
+                ),
+                // 1 < 1.0
+                Arguments.of("Mixed Comparables",
+                        new Ast.Expression.Binary("<",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(new BigDecimal("1.0"))
+                        ),
+                        null
                 ),
                 // 1 == 10
                 Arguments.of("Equal",
@@ -418,6 +472,47 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(new BigDecimal("3.4"))
                         ),
                         new BigDecimal("0.4")
+                ),
+                // 1 / 0
+                Arguments.of("Divide by Zero",
+                        new Ast.Expression.Binary("/",
+                                new Ast.Expression.Literal(new BigInteger("1")),
+                                new Ast.Expression.Literal(new BigInteger("0"))
+                        ),
+                        null
+                ),
+                // 8 ^ 3
+                Arguments.of("BigInteger LHS",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("8")),
+                                new Ast.Expression.Literal(new BigInteger("3"))
+                        ),
+                        new BigInteger("512")
+                ),
+                // 2147483648" ^ 10
+                Arguments.of("Huge LHS",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("2147483648")),
+                                new Ast.Expression.Literal(new BigInteger("10"))
+                        ),
+                        new BigInteger("2085924839766513752338888384931203236916703635113918720651407820138886450957656787131798913024")
+                ),
+                // 2 ^ 1000000
+                // Arguments.of("Huge RHS",
+                //         new Ast.Expression.Binary("^",
+                //                 new Ast.Expression.Literal(new BigInteger("2")),
+                //                 new Ast.Expression.Literal(new BigInteger("1000000"))
+                //         ),
+                //         new BigInteger("0")
+                // )
+
+                // -8" ^ 3
+                Arguments.of("Negative RHS",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("-8")),
+                                new Ast.Expression.Literal(new BigInteger("3"))
+                        ),
+                        new BigInteger("-512")
                 )
         );
     }
