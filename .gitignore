@@ -4,6 +4,9 @@
 # Ignore Gradle build output directory
 build
 
+# Ignore macOS files
+.DS_Store
+
 bin
 
 gradle
@@ -16,6 +19,7 @@ src/test/java/plc/homework
 
 *.zip
 
+.project
 .classpath
 .settings
-.DS_Store
+.gitattributes
