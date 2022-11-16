@@ -5,11 +5,9 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * See the specification for information about what the different visit
