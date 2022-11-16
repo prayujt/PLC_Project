@@ -13,6 +13,7 @@ import java.util.Optional;
  * See the specification for information about what the different visit
  * methods should do.
  */
+
 public final class Analyzer implements Ast.Visitor<Void> {
 
     public Scope scope;
@@ -193,6 +194,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.While ast) {
         Ast.Expression condition = ast.getCondition();
+        visit(condition);
         if (condition.getType() != Environment.Type.BOOLEAN) throw new RuntimeException("While statement condition is not of type Boolean!");
 
         scope = new Scope(scope);
@@ -238,6 +240,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
     public Void visit(Ast.Expression.Group ast) {
         Ast.Expression expression = ast.getExpression();
         if (!(expression instanceof Ast.Expression.Binary)) throw new RuntimeException("Enclosed expression is not of type Ast.Expression.Binary!");
+        visit(expression);
         return null;
     }
 
@@ -249,20 +252,20 @@ public final class Analyzer implements Ast.Visitor<Void> {
         visit(left);
         visit(right);
 
-        if (operator == "&&" || operator == "||") {
+        if (operator.equals("&&") || operator.equals("||")) {
             requireAssignable(Environment.Type.BOOLEAN, left.getType());
             requireAssignable(Environment.Type.BOOLEAN, right.getType());
             ast.setType(Environment.getType("Boolean"));
         }
 
-        else if (operator == "<" || operator == ">" || operator == "==" || operator == "!=") {
+        else if (operator.equals("<") || operator.equals(">") || operator.equals("==") || operator.equals("!=")) {
             requireAssignable(Environment.Type.COMPARABLE, left.getType());
             requireAssignable(Environment.Type.COMPARABLE, right.getType());
             if (left.getType() != right.getType()) throw new RuntimeException("Right and left sides of binary expression are not of same type!");
             ast.setType(Environment.getType("Boolean"));
         }
 
-        else if (operator == "+") {
+        else if (operator.equals("+")) {
             if (left.getType() == Environment.Type.STRING || right.getType() == Environment.Type.STRING) {
                 ast.setType(Environment.getType("String"));
             }
@@ -276,7 +279,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
             }
         }
 
-        else if (operator == "-" || operator == "*" || operator == "/") {
+        else if (operator.equals("-") || operator.equals("*") || operator.equals("/")) {
             if (left.getType() == Environment.Type.INTEGER) {
                 requireAssignable(Environment.Type.INTEGER, right.getType());
                 ast.setType(Environment.getType("Integer"));
@@ -287,7 +290,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
             }
         }
 
-        else if (operator == "^") {
+        else if (operator.equals("^")) {
             requireAssignable(Environment.Type.INTEGER, left.getType());
             requireAssignable(Environment.Type.INTEGER, right.getType());
             ast.setType(Environment.getType("Integer"));
@@ -329,10 +332,13 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.PlcList ast) {
+        Environment.Type type = Environment.Type.ANY;
         for (Ast.Expression value : ast.getValues()) {
             visit(value);
-            requireAssignable(ast.getType(), value.getType());
+            if (type == Environment.Type.ANY) type = value.getType();
+            // requireAssignable(ast.getType(), value.getType());
         }
+        ast.setType(type);
 
         return null;
     }
