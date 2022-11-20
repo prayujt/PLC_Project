@@ -241,6 +241,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
         Ast.Expression expression = ast.getExpression();
         if (!(expression instanceof Ast.Expression.Binary)) throw new RuntimeException("Enclosed expression is not of type Ast.Expression.Binary!");
         visit(expression);
+        ast.setType(expression.getType());
         return null;
     }
 
