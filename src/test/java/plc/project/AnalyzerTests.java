@@ -58,6 +58,16 @@ public final class AnalyzerTests {
                         ),
                         null
                 )
+                // FUN main(): Integer DO END
+                // Arguments.of("Valid Main",
+                //         new Ast.Source(
+                //                 Arrays.asList(),
+                //                 Arrays.asList(
+                //                         new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList())
+                //                 )
+                //         ),
+                //         null
+                // )
         );
     }
 
@@ -413,6 +423,10 @@ public final class AnalyzerTests {
                 Arguments.of("Integer Invalid",
                         // 9223372036854775807
                         new Ast.Expression.Literal(BigInteger.valueOf(Long.MAX_VALUE)),
+                        null
+                ),
+                Arguments.of("Decimal Invalid",
+                        new Ast.Expression.Literal(new BigDecimal("123.456e789")),
                         null
                 )
         );

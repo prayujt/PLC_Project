@@ -40,16 +40,12 @@ public final class Analyzer implements Ast.Visitor<Void> {
             visit(global);
         }
 
-        boolean mainFound = false;
         for (Ast.Function function : ast.getFunctions()) {
-            if (function.getName() == "main" && function.getParameters().size() == 0) {
-                mainFound = true;
-                if (!function.getReturnTypeName().isPresent() || function.getReturnTypeName().get() != "Integer")
-                    throw new RuntimeException("Main function does not return Integer!");
-            }
             visit(function);
         }
-        if (!mainFound) throw new RuntimeException("main/0 function not found!");
+
+        Environment.Function mainFunction = scope.lookupFunction("main", 0);
+        if (mainFunction.getReturnType() != Environment.Type.INTEGER) throw new RuntimeException("Main function does not have Integer return type!");
         return null;
     }
 
@@ -70,8 +66,10 @@ public final class Analyzer implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Function ast) {
         List<Environment.Type> parameterTypes = new ArrayList<Environment.Type>();
-        for (String type : ast.getParameterTypeNames()) {
-            parameterTypes.add(Environment.getType(type));
+        for (int i = 0; i < ast.getParameters().size(); i++) {
+            String parameter = ast.getParameters().get(i);
+            String parameterTypeName = ast.getParameterTypeNames().get(i);
+            scope.defineVariable(parameter, parameter, Environment.getType(parameterTypeName), true, Environment.NIL);
         }
 
         Environment.Type expectedReturnType = ast.getReturnTypeName().isPresent() ? Environment.getType(ast.getReturnTypeName().get()) : Environment.Type.NIL;
@@ -226,6 +224,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
         else if (literal instanceof BigDecimal) {
             BigDecimal temp = (BigDecimal) literal;
             double temp2 = temp.doubleValue();
+            if (Double.isInfinite(temp2)) throw new RuntimeException("Exceeding double range!");
             ast.setType(Environment.getType("Decimal"));
         }
         else if (literal instanceof String) ast.setType(Environment.getType("String"));
