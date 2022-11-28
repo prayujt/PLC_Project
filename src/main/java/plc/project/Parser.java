@@ -68,10 +68,13 @@ public final class Parser {
      */
     public Ast.Global parseList() throws ParseException {
         List<Ast.Expression> expressions = new ArrayList<Ast.Expression>();
-        String name;
 
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing identifier", getIndex());
-        else name = tokens.get(0).getLiteral();
+        String name = tokens.get(0).getLiteral();
+        tokens.advance();
+
+        if (!match(":")) throw new ParseException("Expected :", getIndex());
+        String typeName = tokens.get(0).getLiteral();
         tokens.advance();
 
         if (!match("=")) throw new ParseException("Missing equal", getIndex());
@@ -85,7 +88,7 @@ public final class Parser {
             if (match(",") && match("]")) throw new ParseException("Trailing Comma", getIndex());
         }
 
-        return new Ast.Global(name, true, Optional.of(new Ast.Expression.PlcList(expressions)));
+        return new Ast.Global(name, typeName, true, Optional.of(new Ast.Expression.PlcList(expressions)));
     }
 
     /**
@@ -93,13 +96,16 @@ public final class Parser {
      * next token declares a mutable global variable, aka {@code VAR}.
      */
     public Ast.Global parseMutable() throws ParseException {
-        String name;
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing identifier", getIndex());
-        else name = tokens.get(0).getLiteral();
+        String name = tokens.get(0).getLiteral();
         tokens.advance();
 
-        if (match("=")) return new Ast.Global(name, true, Optional.of(parseExpression()));
-        else return new Ast.Global(name, true, Optional.empty());
+        if (!match(":")) throw new ParseException("Expected :", getIndex());
+        String typeName = tokens.get(0).getLiteral();
+        tokens.advance();
+
+        if (match("=")) return new Ast.Global(name, typeName, true, Optional.of(parseExpression()));
+        else return new Ast.Global(name, typeName, true, Optional.empty());
     }
 
     /**
@@ -107,13 +113,16 @@ public final class Parser {
      * next token declares an immutable global variable, aka {@code VAL}.
      */
     public Ast.Global parseImmutable() throws ParseException {
-        String name;
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing identifier", getIndex());
-        else name = tokens.get(0).getLiteral();
+        String name = tokens.get(0).getLiteral();
+        tokens.advance();
+
+        if (!match(":")) throw new ParseException("Expected :", getIndex());
+        String typeName = tokens.get(0).getLiteral();
         tokens.advance();
 
         if (!match("=")) throw new ParseException("Missing equal", getIndex());
-        return new Ast.Global(name, false, Optional.of(parseExpression()));
+        return new Ast.Global(name, typeName, false, Optional.of(parseExpression()));
     }
 
     /**
@@ -122,6 +131,7 @@ public final class Parser {
      */
     public Ast.Function parseFunction() throws ParseException {
         match("FUN");
+        Optional<String> returnType = Optional.empty();
 
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Not a valid function opening!", getIndex());
         String functionName = tokens.get(0).getLiteral();
@@ -130,22 +140,36 @@ public final class Parser {
         if (!match("(")) throw new ParseException("Missing opening parenthesis", getIndex());
 
         List<String> parameters = new ArrayList<String>();
+        List<String> parameterTypeNames = new ArrayList<String>();
 
         while (!match(")")) {
             if (peek(",")) throw new ParseException("Leading Comma", getIndex());
             if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Not a valid parameter!", getIndex());
-            String parameter = tokens.get(0).getLiteral();
-            parameters.add(parameter);
+
+            String parameterName = tokens.get(0).getLiteral();
             tokens.advance();
+            parameters.add(parameterName);
+
+            if (!match(":")) throw new ParseException("Expected :", getIndex());
+            if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Not a valid parameter type!", getIndex());
+            String typeName = tokens.get(0).getLiteral();
+            tokens.advance();
+            parameterTypeNames.add(typeName);
+
             if (!peek(")") && !peek(",")) throw new ParseException("Missing Comma", getIndex());
             if (match(",") && peek(")")) throw new ParseException("Trailing Comma", getIndex());
+        }
+
+        if (match(":")) {
+            returnType = Optional.of(tokens.get(0).getLiteral());
+            tokens.advance();
         }
 
         if (!match("DO")) throw new ParseException("Missing DO!", getIndex());
         List<Ast.Statement> statements = parseBlock();
 
         if (!match("END")) throw new ParseException("Missing END!", getIndex());
-        return new Ast.Function(functionName, parameters, statements);
+        return new Ast.Function(functionName, parameters, parameterTypeNames, returnType, statements);
     }
 
     /**
@@ -192,14 +216,20 @@ public final class Parser {
     public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
         if (!peek(Token.Type.IDENTIFIER)) throw new ParseException("Missing variable name!", getIndex());
         Optional<Ast.Expression> expression = Optional.empty();
+        Optional<String> typeName = Optional.empty();
 
         String name = tokens.get(0).getLiteral();
         tokens.advance();
 
+        if (match(":")) {
+            typeName = Optional.of(tokens.get(0).getLiteral());
+            tokens.advance();
+        }
         if (match("=")) expression = Optional.of(parseExpression());
         if (!match(";")) throw new ParseException("Missing semicolon", getIndex());
 
-        return new Ast.Statement.Declaration(name, expression);
+
+        return new Ast.Statement.Declaration(name, typeName, expression);
     }
 
     /**

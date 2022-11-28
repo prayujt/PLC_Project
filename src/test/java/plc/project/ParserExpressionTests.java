@@ -438,36 +438,36 @@ final class ParserExpressionTests {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource
-    void testFunctionExceptions(String test, List<Token> tokens, Ast.Function expected, int index, String message) {
-        testIndex(tokens, expected, Parser::parseFunction, index, message);
-    }
+    // @ParameterizedTest
+    // @MethodSource
+    // void testFunctionExceptions(String test, List<Token> tokens, Ast.Function expected, int index, String message) {
+    //     testIndex(tokens, expected, Parser::parseFunction, index, message);
+    // }
 
-    private static Stream<Arguments> testFunctionExceptions() {
-        return Stream.of(
-            Arguments.of("Trailing Comma in Function Declaration",
-                    // FUN function(param1, param2,) DO stmt; END
-                    Arrays.asList(
-                        new Token(Token.Type.IDENTIFIER, "FUN", 0),
-                        new Token(Token.Type.IDENTIFIER, "function", 4),
-                        new Token(Token.Type.OPERATOR, "(", 13),
-                        new Token(Token.Type.IDENTIFIER, "param1", 14),
-                        new Token(Token.Type.OPERATOR, ",", 20),
-                        new Token(Token.Type.IDENTIFIER, "param2", 22),
-                        new Token(Token.Type.OPERATOR, ",", 28),
-                        new Token(Token.Type.OPERATOR, ")", 29),
-                        new Token(Token.Type.IDENTIFIER, "DO", 31),
-                        new Token(Token.Type.IDENTIFIER, "stmt", 34),
-                        new Token(Token.Type.OPERATOR, ";", 38),
-                        new Token(Token.Type.IDENTIFIER, "END", 40)
-                    ),
-                    null,
-                    29,
-                    "Trailing Comma"
-            )
-        );
-    }
+    // private static Stream<Arguments> testFunctionExceptions() {
+    //     return Stream.of(
+    //         Arguments.of("Trailing Comma in Function Declaration",
+    //                 // FUN function(param1, param2,) DO stmt; END
+    //                 Arrays.asList(
+    //                     new Token(Token.Type.IDENTIFIER, "FUN", 0),
+    //                     new Token(Token.Type.IDENTIFIER, "function", 4),
+    //                     new Token(Token.Type.OPERATOR, "(", 13),
+    //                     new Token(Token.Type.IDENTIFIER, "param1", 14),
+    //                     new Token(Token.Type.OPERATOR, ",", 20),
+    //                     new Token(Token.Type.IDENTIFIER, "param2", 22),
+    //                     new Token(Token.Type.OPERATOR, ",", 28),
+    //                     new Token(Token.Type.OPERATOR, ")", 29),
+    //                     new Token(Token.Type.IDENTIFIER, "DO", 31),
+    //                     new Token(Token.Type.IDENTIFIER, "stmt", 34),
+    //                     new Token(Token.Type.OPERATOR, ";", 38),
+    //                     new Token(Token.Type.IDENTIFIER, "END", 40)
+    //                 ),
+    //                 null,
+    //                 29,
+    //                 "Trailing Comma"
+    //         )
+    //     );
+    // }
 
     /**
      * Standard test function. If expected is null, a ParseException is expected
