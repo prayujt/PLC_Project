@@ -33,14 +33,15 @@ public final class Generator implements Ast.Visitor<Void> {
     public Void visit(Ast.Source ast) {
         print("public class Main {");
         newline(0);
-
         indent++;
+        newline(indent);
+
         for (Ast.Global global : ast.getGlobals()) {
             visit(global);
             newline(indent);
         }
 
-        newline(indent);
+        if (ast.getGlobals().size() > 0) newline(indent);
         print("public static void main(String[] args) {");
         indent++;
         newline(indent);
@@ -81,11 +82,17 @@ public final class Generator implements Ast.Visitor<Void> {
         print(ast.getFunction().getReturnType().getJvmName(), " ", ast.getName(), "(");
         for (int i = 0; i < ast.getParameters().size(); i++) {
             String parameterName = ast.getParameters().get(i);
-            String parameterType = ast.getParameterTypeNames().get(i);
+            String parameterType = Environment.getType(ast.getParameterTypeNames().get(i)).getJvmName();
             print(parameterType, " ", parameterName);
             if (i != ast.getParameters().size() - 1) print(", ");
         }
         print(") {");
+
+        if (ast.getStatements().size() == 0) {
+            print("}");
+            return null;
+        }
+
         indent++;
         newline(indent);
 
@@ -196,8 +203,8 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.While ast) {
         print("while (", ast.getCondition(), ") {");
-        newline(indent);
         indent++;
+        newline(indent);
 
         for (int i = 0; i < ast.getStatements().size(); i++) {
             print(ast.getStatements().get(i));
