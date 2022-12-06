@@ -36,9 +36,9 @@ public final class Generator implements Ast.Visitor<Void> {
         indent++;
         newline(indent);
 
-        for (Ast.Global global : ast.getGlobals()) {
-            visit(global);
-            newline(indent);
+        for (int i = 0; i < ast.getGlobals().size(); i++) {
+            visit(ast.getGlobals().get(i));
+            newline((i == ast.getGlobals().size() - 1) ? 0 : indent);
         }
 
         if (ast.getGlobals().size() > 0) newline(indent);
@@ -55,6 +55,7 @@ public final class Generator implements Ast.Visitor<Void> {
 
         for (int i = 0; i < ast.getFunctions().size(); i++) {
             visit(ast.getFunctions().get(i));
+            newline(0);
             if (i != ast.getFunctions().size() - 1) newline(indent);
         }
 
@@ -105,7 +106,6 @@ public final class Generator implements Ast.Visitor<Void> {
         newline(indent);
         print("}");
 
-        newline(0);
         return null;
     }
 
@@ -203,6 +203,12 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.While ast) {
         print("while (", ast.getCondition(), ") {");
+
+        if (ast.getStatements().size() == 0) {
+            print("}");
+            return null;
+        }
+
         indent++;
         newline(indent);
 

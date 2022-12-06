@@ -252,8 +252,8 @@ public class GeneratorTests {
 
     @Test
     void testEverything() {
-        String input = "VAR x: Integer; VAR y: Decimal; VAR z: String; FUN f(): Integer DO RETURN x; END FUN g(): Decimal DO RETURN y; END FUN h(): String DO RETURN z; END FUN main(): Integer DO END";
-        // String input = "FUN main(): Integer DO print(\"Hello World\"); RETURN 0; END";
+        // String input = "VAR x: Integer; VAR y: Decimal; VAR z: String; FUN f(): Integer DO RETURN x; END FUN g(): Decimal DO RETURN y; END FUN h(): String DO RETURN z; END FUN main(): Integer DO END";
+        String input = "FUN main(): Integer DO print(\"Hello World\"); RETURN 0; END";
         List<Token> tokens = new Lexer(input).lex();
         Ast.Source ast = new Parser(tokens).parseSource();
         new Analyzer(new Scope(null)).visit(ast);
@@ -263,11 +263,25 @@ public class GeneratorTests {
         // throw new RuntimeException(writer.toString());
     }
 
+
+    @Test
+    void testEverything2() {
+        String input = "VAR x: Integer; VAR y: Decimal; VAR z: String; FUN f(): Integer DO RETURN x; END FUN g(): Decimal DO RETURN y; END FUN h(): String DO RETURN z; END FUN main(): Integer DO END";
+        // String input = "FUN main(): Integer DO print(\"Hello World\"); RETURN 0; END";
+        List<Token> tokens = new Lexer(input).lex();
+        Ast.Source ast = new Parser(tokens).parseSource();
+        new Analyzer(new Scope(null)).visit(ast);
+
+        StringWriter writer = new StringWriter();
+        new Generator(new PrintWriter(writer)).visit(ast);
+        throw new RuntimeException(writer.toString());
+    }
+
     @Test
     void testFunction() {
-        // String input = "FUN square(num: Decimal): Decimal DO RETURN num * num; END";
+        String input = "FUN square(num: Decimal): Decimal DO RETURN num * num; END";
         // String input = "FUN func(x: Integer, y: Integer, z: String) DO WHILE x == y DO x = x + 1; END print(x); print(y); print(z); END";
-        String input = "FUN main(num: Integer) DO WHILE num < 10 DO print(num + \"\\n\"); num = num + 1; END END";
+        // String input = "FUN main(num: Integer) DO WHILE num < 10 DO print(num + \"\\n\"); num = num + 1; END END";
 
         List<Token> tokens = new Lexer(input).lex();
         Ast.Function ast = new Parser(tokens).parseFunction();
