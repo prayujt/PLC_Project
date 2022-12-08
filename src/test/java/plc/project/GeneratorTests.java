@@ -274,7 +274,7 @@ public class GeneratorTests {
 
         StringWriter writer = new StringWriter();
         new Generator(new PrintWriter(writer)).visit(ast);
-        throw new RuntimeException(writer.toString());
+        // throw new RuntimeException(writer.toString());
     }
 
     @Test
@@ -285,6 +285,21 @@ public class GeneratorTests {
 
         List<Token> tokens = new Lexer(input).lex();
         Ast.Function ast = new Parser(tokens).parseFunction();
+        new Analyzer(new Scope(null)).visit(ast);
+
+        StringWriter writer = new StringWriter();
+        new Generator(new PrintWriter(writer)).visit(ast);
+        // throw new RuntimeException(writer.toString());
+    }
+
+    @Test
+    void testStatement() {
+        String input = "NIL";
+        // String input = "FUN func(x: Integer, y: Integer, z: String) DO WHILE x == y DO x = x + 1; END print(x); print(y); print(z); END";
+        // String input = "FUN main(num: Integer) DO WHILE num < 10 DO print(num + \"\\n\"); num = num + 1; END END";
+
+        List<Token> tokens = new Lexer(input).lex();
+        Ast.Expression ast = new Parser(tokens).parseExpression();
         new Analyzer(new Scope(null)).visit(ast);
 
         StringWriter writer = new StringWriter();

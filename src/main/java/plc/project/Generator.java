@@ -120,7 +120,7 @@ public final class Generator implements Ast.Visitor<Void> {
         print(ast.getVariable().getType().getJvmName());
 
         Optional<Ast.Expression> value = ast.getValue();
-        // if (value.isPresent() && value.get() instanceof Ast.Expression.PlcList) print("[]");
+        if (value.isPresent() && value.get() instanceof Ast.Expression.PlcList) print("[]");
         print(" ", ast.getName());
         if (value.isPresent()) print(" = ", value.get());
         print(";");
@@ -233,7 +233,8 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Expression.Literal ast) {
         Object literal = ast.getLiteral();
-        if (literal instanceof String) print("\"", literal.toString(), "\"");
+        if (literal == null) print("null");
+        else if (literal instanceof String) print("\"", literal.toString(), "\"");
         else if (literal instanceof Character) print("\'", literal.toString(), "\'");
         else print(literal.toString());
         return null;
@@ -256,7 +257,7 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.Access ast) {
-        print(ast.getName());
+        print(ast.getVariable().getJvmName());
         if (ast.getOffset().isPresent()) print("[", ast.getOffset().get(), "]");
         return null;
     }
